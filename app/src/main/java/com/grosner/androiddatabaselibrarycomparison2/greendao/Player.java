@@ -1,6 +1,6 @@
 package com.grosner.androiddatabaselibrarycomparison2.greendao;
 
-import com.grosner.androiddatabaselibrarycomparison2.IPlayer;
+import com.grosner.androiddatabaselibrarycomparison2.tests.IPlayer;
 import com.raizlabs.android.dbflow.structure.BaseModel;
 
 import org.greenrobot.greendao.annotation.Entity;

@@ -1,30 +1,18 @@
 package com.grosner.androiddatabaselibrarycomparison2.realm
 
-import com.grosner.androiddatabaselibrarycomparison2.MainActivity
+import com.grosner.androiddatabaselibrarycomparison2.tests.MainActivity
 import com.grosner.androiddatabaselibrarycomparison2.events.LogTestDataEvent
+import com.grosner.androiddatabaselibrarycomparison2.tests.randomPlayerList
 import io.realm.Realm
 import org.greenrobot.eventbus.EventBus
-import java.util.*
 
 val REALM_FRAMEWORK_NAME = "Realm"
 
 fun testRealmModels() {
-
-
     val realm = Realm.getDefaultInstance()
     realm.executeTransaction { it.where(Player::class.java).findAll().deleteAllFromRealm() }
 
-    val ageRandom = Random(System.currentTimeMillis())
-    val list = mutableListOf<Player>()
-    (0..MainActivity.LOOP_COUNT).forEach {
-        list += Player().apply {
-            id = it.toString()
-            firstName = "Andrew"
-            lastName = "Grosner"
-            age = ageRandom.nextInt()
-            position = "Pitcher"
-        }
-    }
+    val list = randomPlayerList { Player() }
 
     var startTime = System.currentTimeMillis()
     realm.executeTransaction {

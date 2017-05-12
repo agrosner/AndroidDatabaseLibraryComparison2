@@ -1,18 +1,12 @@
-package com.grosner.androiddatabaselibrarycomparison2
+package com.grosner.androiddatabaselibrarycomparison2.tests
 
 import android.app.Activity
-import android.graphics.Color
-import android.os.Bundle
+import android.graphics.Color.WHITE
+import android.graphics.Color.rgb
 import android.util.Log
-import android.view.View
-import android.widget.Button
-import android.widget.ProgressBar
-import android.widget.ScrollView
-import android.widget.TextView
-import com.github.mikephil.charting.charts.BarChart
-import com.github.mikephil.charting.data.BarData
 import com.github.mikephil.charting.data.BarDataSet
 import com.github.mikephil.charting.data.BarEntry
+import com.grosner.androiddatabaselibrarycomparison2.R
 import com.grosner.androiddatabaselibrarycomparison2.dbflow.DBFLOW_FRAMEWORK_NAME
 import com.grosner.androiddatabaselibrarycomparison2.dbflow.testDBFlow
 import com.grosner.androiddatabaselibrarycomparison2.events.LogTestDataEvent
@@ -21,58 +15,47 @@ import com.grosner.androiddatabaselibrarycomparison2.greendao.GREENDAO_FRAMEWORK
 import com.grosner.androiddatabaselibrarycomparison2.greendao.testGreenDao
 import com.grosner.androiddatabaselibrarycomparison2.realm.REALM_FRAMEWORK_NAME
 import com.grosner.androiddatabaselibrarycomparison2.realm.testRealmModels
+import com.grosner.androiddatabaselibrarycomparison2.requery.REQUERY_FRAMEWORK_NAME
+import com.grosner.androiddatabaselibrarycomparison2.requery.testRequery
 import org.greenrobot.eventbus.EventBus
-import org.greenrobot.eventbus.Subscribe
-import org.greenrobot.eventbus.ThreadMode
-import java.util.*
+import org.jetbrains.anko.setContentView
 
-class MainActivity : Activity() {
+class MainActivity : MainActivityComponentHandler, Activity() {
 
-    private lateinit var simpleTrialButton: Button
-    private lateinit var complexTrialButton: Button
-    private lateinit var resultsLabel: TextView
-    private lateinit var resultsContainer: ScrollView
-    private lateinit var resultsTextView: TextView
-    private lateinit var chartView: BarChart
-    private lateinit var progressBar: ProgressBar
-
-
-    private var chartEntrySets = LinkedHashMap<String, ArrayList<BarEntry>>()
+    private var chartSave = arrayListOf<BarEntry>()
+    private var chartLoad = arrayListOf<BarEntry>()
     private var runningTests = false
     private var runningTestName: String? = ""
     private var runTestThread: Thread? = null
+    private val resultsStringBuilder = StringBuilder()
 
-    override fun onCreate(savedInstanceState: Bundle?) {
+    private val viewModel = MainActivityViewModel()
+
+    override fun onCreate(savedInstanceState: android.os.Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
-
-        simpleTrialButton = findViewById(R.id.simple) as Button
-        complexTrialButton = findViewById(R.id.complex) as Button
-        resultsLabel = findViewById(R.id.resultsLabel) as TextView
-        resultsContainer = findViewById(R.id.resultsContainer) as ScrollView
-        resultsTextView = findViewById(R.id.results) as TextView
-        progressBar = findViewById(R.id.progress) as ProgressBar
-        progressBar.isIndeterminate = true
-        chartView = findViewById(R.id.chart) as BarChart
+        MainActivityComponent(this).apply {
+            viewModel = this@MainActivity.viewModel
+        }.setContentView(this)
 
         if (savedInstanceState != null) {
             runningTests = savedInstanceState.getBoolean(STATE_RUNNING_TESTS)
             runningTestName = savedInstanceState.getString(STATE_TEST_NAME)
-            chartEntrySets = savedInstanceState.getSerializable(STATE_MAPDATA) as LinkedHashMap<String, ArrayList<BarEntry>>
+            chartSave = savedInstanceState.getSerializable(STATE_SAVE_DATA) as ArrayList<BarEntry>
+            chartLoad = savedInstanceState.getSerializable(STATE_LOAD_DATA) as ArrayList<BarEntry>
 
             setBusyUI(runningTests, runningTestName ?: "")
-            if (!runningTests && chartEntrySets.size > 0) {
+            if (!runningTests && chartSave.size > 0) {
                 // graph existing data
                 initChart()
             }
         }
     }
 
-    public override fun onSaveInstanceState(savedInstanceState: Bundle) {
+    public override fun onSaveInstanceState(savedInstanceState: android.os.Bundle) {
         with(savedInstanceState) {
-            putBoolean(STATE_RUNNING_TESTS, runningTests)
-            putString(STATE_TEST_NAME, runningTestName)
-            putSerializable(STATE_MAPDATA, chartEntrySets)
+            putBoolean(Companion.STATE_RUNNING_TESTS, runningTests)
+            putString(Companion.STATE_TEST_NAME, runningTestName)
+            putSerializable(Companion.STATE_LOAD_DATA, chartSave)
         }
 
         super.onSaveInstanceState(savedInstanceState)
@@ -90,13 +73,13 @@ class MainActivity : Activity() {
     }
 
     // handle data collection event
-    @Subscribe
+    @org.greenrobot.eventbus.Subscribe
     fun onEvent(event: LogTestDataEvent) {
         logTime(event.startTime, event.framework, event.eventName)
     }
 
     // handle graphing event
-    @Subscribe(threadMode = ThreadMode.MAIN)
+    @org.greenrobot.eventbus.Subscribe(threadMode = org.greenrobot.eventbus.ThreadMode.MAIN)
     fun onEventMainThread(event: TrialCompletedEvent) {
         initChart()
         runningTests = false
@@ -116,73 +99,56 @@ class MainActivity : Activity() {
         Log.e(MainActivity::class.java.simpleName, name + " took: " + (System.currentTimeMillis() - startTime))
         val elapsedMsec = if (startTime == -1L) 0 else System.currentTimeMillis() - startTime
         resultsStringBuilder.append("$framework $name took: $elapsedMsec msec\n")
-        runOnUiThread { resultsTextView.text = resultsStringBuilder.toString() }
+        runOnUiThread { viewModel.runningDisplayText.value = resultsStringBuilder.toString() }
         // update chart data
-        val entry = BarEntry((if (name == SAVE_TIME) 0 else 1).toFloat(), elapsedMsec.toFloat())
-        chartEntrySets.getValue(framework).add(entry);
+        val position = when (framework) {
+            DBFLOW_FRAMEWORK_NAME -> 0
+            REALM_FRAMEWORK_NAME -> 1
+            REQUERY_FRAMEWORK_NAME -> 2
+            GREENDAO_FRAMEWORK_NAME -> 3
+            else -> 4
+        }
+        val entry = BarEntry(position.toFloat(), elapsedMsec.toFloat())
+        entry.data = framework
+        if (name == SAVE_TIME) {
+            chartSave.add(entry)
+        } else {
+            chartLoad.add(entry)
+        }
     }
 
     private fun setBusyUI(enabled: Boolean, testName: String) {
         runningTestName = testName
         runningTests = enabled
-        if (enabled) {
-            runningTests = true
-            resultsStringBuilder.setLength(0)
-            resultsContainer.visibility = View.VISIBLE
-            chartView.visibility = View.GONE
-            enableButtons(false)
-            progressBar.visibility = View.VISIBLE
-        } else {
-            runningTests = false
-            resultsContainer.visibility = View.GONE
-            if (runningTestName != null) {
-                chartView.visibility = View.VISIBLE
-            }
-            enableButtons(true)
-            progressBar.visibility = View.GONE
-        }
+        viewModel.isLoading.value = enabled
         if (runningTestName != null) {
-            resultsLabel.text = resources.getString(R.string.results, testName)
-            resultsLabel.visibility = View.VISIBLE
+            viewModel.resultsLabel.value = resources.getString(R.string.results, testName)
         }
     }
 
     private fun initChart() {
-        val dataSets = chartEntrySets.keys.map {
-            BarDataSet(chartEntrySets[it], it).apply { color = getFrameworkColor(it) }
-        }
-        with(chartView) {
-            this.data = BarData(dataSets)
-            setFitBars(true)
-            description = null // this takes up t`oo much space, so clear it
-            animateXY(2000, 2000)
-            invalidate()
-        }
+        viewModel.saveData.value = chartSave.map { BarDataSet(listOf(it), it.data.toString()).apply { color = getFrameworkColor(it.data.toString()) } }
+        viewModel.loadData.value = chartLoad.map { BarDataSet(listOf(it), it.data.toString()).apply { color = getFrameworkColor(it.data.toString()) } }
     }
 
     private fun resetChart() {
-        with(chartEntrySets) {
+        with(chartSave) {
             clear()
-            // the order you add these in is the order they're displayed in
-            put(DBFLOW_FRAMEWORK_NAME, arrayListOf<BarEntry>())
-            put(GREENDAO_FRAMEWORK_NAME, arrayListOf<BarEntry>())
-            put(REALM_FRAMEWORK_NAME, arrayListOf<BarEntry>())
+        }
+        with(chartLoad) {
+            clear()
         }
     }
 
     private fun getFrameworkColor(framework: String): Int {
         // using the 300 line colors from http://www.google.com/design/spec/style/color.html#color-color-palette
         when (framework) {
-            DBFLOW_FRAMEWORK_NAME -> return Color.rgb(0xE5, 0x73, 0x73) // red
-            GREENDAO_FRAMEWORK_NAME -> return Color.rgb(0xBA, 0x68, 0xC8) // purple
-            REALM_FRAMEWORK_NAME -> return Color.rgb(0xAE, 0xD5, 0X81); // light green
-            else -> return Color.WHITE
+            DBFLOW_FRAMEWORK_NAME -> return rgb(0xE5, 0x73, 0x73) // red
+            GREENDAO_FRAMEWORK_NAME -> return rgb(0xBA, 0x68, 0xC8) // purple
+            REALM_FRAMEWORK_NAME -> return rgb(0xAE, 0xD5, 0X81); // light green
+            REQUERY_FRAMEWORK_NAME -> return rgb(0x79, 0x86, 0xCB) // indigo
+            else -> return WHITE
         }
-    }
-
-    private fun enableButtons(enabled: Boolean) {
-        simpleTrialButton.isEnabled = enabled
-        complexTrialButton.isEnabled = enabled
     }
 
     /**
@@ -190,8 +156,8 @@ class MainActivity : Activity() {
 
      * @param v button view
      */
-    fun runSimpleTrial(v: View) {
-        setBusyUI(true, resources.getString(R.string.simple))
+    override fun runSimpleTrial() {
+        setBusyUI(true, resources.getString(com.grosner.androiddatabaselibrarycomparison2.R.string.simple))
         resetChart()
         runTestThread = Thread(Runnable {
             runningTests = true
@@ -199,6 +165,7 @@ class MainActivity : Activity() {
             testDBFlow()
             testGreenDao(applicationContext)
             testRealmModels()
+            testRequery(applicationContext)
             EventBus.getDefault().post(TrialCompletedEvent(resources.getString(R.string.simple)))
         }).apply { start() }
     }
@@ -208,8 +175,8 @@ class MainActivity : Activity() {
 
      * @param v button view
      */
-    fun runComplexTrial(v: View) {
-        setBusyUI(true, resources.getString(R.string.complex))
+    fun runComplexTrial(v: android.view.View) {
+        setBusyUI(true, resources.getString(com.grosner.androiddatabaselibrarycomparison2.R.string.complex))
         resetChart()
         Thread(Runnable {
             runningTests = true
@@ -232,9 +199,9 @@ class MainActivity : Activity() {
 
         const val LOOP_COUNT = 5000
 
-        private val STATE_MAPDATA = "mapData"
+        private val STATE_LOAD_DATA = "loadData"
+        private val STATE_SAVE_DATA = "saveData"
         private val STATE_RUNNING_TESTS = "runningTests"
         private val STATE_TEST_NAME = "testName"
-        private val resultsStringBuilder = StringBuilder()
     }
 }

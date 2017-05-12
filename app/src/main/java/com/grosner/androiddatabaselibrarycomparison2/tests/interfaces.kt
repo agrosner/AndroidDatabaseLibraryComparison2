@@ -1,4 +1,4 @@
-package com.grosner.androiddatabaselibrarycomparison2
+package com.grosner.androiddatabaselibrarycomparison2.tests
 
 interface IPlayer {
 

@@ -1,7 +1,7 @@
 package com.grosner.androiddatabaselibrarycomparison2.dbflow
 
-import com.grosner.androiddatabaselibrarycomparison2.IPlayer
-import com.grosner.androiddatabaselibrarycomparison2.MainActivity
+import com.grosner.androiddatabaselibrarycomparison2.tests.IPlayer
+import com.grosner.androiddatabaselibrarycomparison2.tests.MainActivity
 import com.raizlabs.android.dbflow.annotation.Database
 import com.raizlabs.android.dbflow.annotation.PrimaryKey
 import com.raizlabs.android.dbflow.annotation.Table
@@ -26,4 +26,5 @@ class Player : IPlayer, BaseModel() {
     override var age = 0
 
     override var position = ""
+
 }

@@ -1,10 +1,10 @@
 package com.grosner.androiddatabaselibrarycomparison2.greendao
 
 import android.content.Context
-import com.grosner.androiddatabaselibrarycomparison2.MainActivity
+import com.grosner.androiddatabaselibrarycomparison2.tests.MainActivity
 import com.grosner.androiddatabaselibrarycomparison2.events.LogTestDataEvent
+import com.grosner.androiddatabaselibrarycomparison2.tests.randomPlayerList
 import org.greenrobot.eventbus.EventBus
-import java.util.*
 
 val GREENDAO_FRAMEWORK_NAME = "GreenDao"
 
@@ -17,17 +17,7 @@ fun testGreenDao(ctx: Context) {
     val playerDao = daoSession.playerDao
     playerDao.deleteAll()
 
-    var ageRandom = Random(System.currentTimeMillis())
-    val list = mutableListOf<Player>()
-    (0..MainActivity.LOOP_COUNT).forEach {
-        list += Player().apply {
-            id = it.toString()
-            firstName = "Andrew"
-            lastName = "Grosner"
-            age = ageRandom.nextInt()
-            position = "Pitcher"
-        }
-    }
+    val list = randomPlayerList { Player() }
 
     var startTime = System.currentTimeMillis()
     playerDao.insertInTx(list)

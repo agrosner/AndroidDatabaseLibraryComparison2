@@ -1,6 +1,6 @@
 package com.grosner.androiddatabaselibrarycomparison2.realm
 
-import com.grosner.androiddatabaselibrarycomparison2.IPlayer
+import com.grosner.androiddatabaselibrarycomparison2.tests.IPlayer
 import com.raizlabs.android.dbflow.annotation.PrimaryKey
 import io.realm.RealmObject
 
