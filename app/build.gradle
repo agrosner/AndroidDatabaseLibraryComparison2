@@ -1,6 +1,7 @@
 apply plugin: 'com.android.application'
 apply plugin: 'kotlin-android'
 apply plugin: 'org.greenrobot.greendao'
+apply plugin: 'realm-android'
 
 android {
     compileSdkVersion 25
@@ -14,7 +15,7 @@ android {
     }
 }
 
-def dbflow_version = "4.0.0"
+def dbflow_version = "4.0.0-beta7"
 
 dependencies {
     compile 'com.android.support:appcompat-v7:25.3.1'
