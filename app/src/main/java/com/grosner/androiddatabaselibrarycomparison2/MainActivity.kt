@@ -13,13 +13,14 @@ import com.github.mikephil.charting.charts.BarChart
 import com.github.mikephil.charting.data.BarData
 import com.github.mikephil.charting.data.BarDataSet
 import com.github.mikephil.charting.data.BarEntry
-import com.github.mikephil.charting.interfaces.datasets.IBarDataSet
 import com.grosner.androiddatabaselibrarycomparison2.dbflow.DBFLOW_FRAMEWORK_NAME
 import com.grosner.androiddatabaselibrarycomparison2.dbflow.testDBFlow
 import com.grosner.androiddatabaselibrarycomparison2.events.LogTestDataEvent
 import com.grosner.androiddatabaselibrarycomparison2.events.TrialCompletedEvent
 import com.grosner.androiddatabaselibrarycomparison2.greendao.GREENDAO_FRAMEWORK_NAME
 import com.grosner.androiddatabaselibrarycomparison2.greendao.testGreenDao
+import com.grosner.androiddatabaselibrarycomparison2.realm.REALM_FRAMEWORK_NAME
+import com.grosner.androiddatabaselibrarycomparison2.realm.testRealmModels
 import org.greenrobot.eventbus.EventBus
 import org.greenrobot.eventbus.Subscribe
 import org.greenrobot.eventbus.ThreadMode
@@ -68,9 +69,11 @@ class MainActivity : Activity() {
     }
 
     public override fun onSaveInstanceState(savedInstanceState: Bundle) {
-        savedInstanceState.putBoolean(STATE_RUNNING_TESTS, runningTests)
-        savedInstanceState.putString(STATE_TEST_NAME, runningTestName)
-        savedInstanceState.putSerializable(STATE_MAPDATA, chartEntrySets)
+        with(savedInstanceState) {
+            putBoolean(STATE_RUNNING_TESTS, runningTests)
+            putString(STATE_TEST_NAME, runningTestName)
+            putSerializable(STATE_MAPDATA, chartEntrySets)
+        }
 
         super.onSaveInstanceState(savedInstanceState)
     }
@@ -112,17 +115,16 @@ class MainActivity : Activity() {
     fun logTime(startTime: Long, framework: String, name: String) {
         Log.e(MainActivity::class.java.simpleName, name + " took: " + (System.currentTimeMillis() - startTime))
         val elapsedMsec = if (startTime == -1L) 0 else System.currentTimeMillis() - startTime
-        resultsStringBuilder.append(framework).append(' ').append(name)
-                .append(" took: ")
-                .append(elapsedMsec)
-                .append(" msec\n")
+        resultsStringBuilder.append("$framework $name took: $elapsedMsec msec\n")
         runOnUiThread { resultsTextView.text = resultsStringBuilder.toString() }
         // update chart data
-        addChartData(framework, name, elapsedMsec)
+        val entry = BarEntry((if (name == SAVE_TIME) 0 else 1).toFloat(), elapsedMsec.toFloat())
+        chartEntrySets.getValue(framework).add(entry);
     }
 
     private fun setBusyUI(enabled: Boolean, testName: String) {
         runningTestName = testName
+        runningTests = enabled
         if (enabled) {
             runningTests = true
             resultsStringBuilder.setLength(0)
@@ -146,33 +148,26 @@ class MainActivity : Activity() {
     }
 
     private fun initChart() {
-        val dataSets = ArrayList<IBarDataSet>()
-        // note that we show save first because that's how we initialize the DB
-        for (frameworkName in chartEntrySets.keys) {
-            val entrySet = chartEntrySets[frameworkName]
-            val dataSet = BarDataSet(entrySet, frameworkName)
-            dataSet.color = getFrameworkColor(frameworkName)
-            dataSets.add(dataSet)
+        val dataSets = chartEntrySets.keys.map {
+            BarDataSet(chartEntrySets[it], it).apply { color = getFrameworkColor(it) }
         }
-
-        val data = BarData(dataSets)
-        chartView.data = data
-        chartView.description = null // this takes up too much space, so clear it
-        chartView.animateXY(2000, 2000)
-        chartView.invalidate()
+        with(chartView) {
+            this.data = BarData(dataSets)
+            setFitBars(true)
+            description = null // this takes up t`oo much space, so clear it
+            animateXY(2000, 2000)
+            invalidate()
+        }
     }
 
     private fun resetChart() {
-        chartEntrySets.clear()
-        // the order you add these in is the order they're displayed in
-        chartEntrySets.put(DBFLOW_FRAMEWORK_NAME, arrayListOf<BarEntry>())
-        chartEntrySets.put(GREENDAO_FRAMEWORK_NAME, arrayListOf<BarEntry>())
-        /*chartEntrySets.put(OrmLiteTester.FRAMEWORK_NAME, new ArrayList<BarEntry>());
-        chartEntrySets.put(OllieTester.FRAMEWORK_NAME, new ArrayList<BarEntry>());
-        chartEntrySets.put(RealmTester.FRAMEWORK_NAME, new ArrayList<BarEntry>());*/
-        //chartEntrySets.put(SugarTester.FRAMEWORK_NAME, new ArrayList<BarEntry>());
-        //chartEntrySets.put(AATester.FRAMEWORK_NAME, new ArrayList<BarEntry>());
-        //chartEntrySets.put(SprinklesTester.FRAMEWORK_NAME, new ArrayList<BarEntry>());
+        with(chartEntrySets) {
+            clear()
+            // the order you add these in is the order they're displayed in
+            put(DBFLOW_FRAMEWORK_NAME, arrayListOf<BarEntry>())
+            put(GREENDAO_FRAMEWORK_NAME, arrayListOf<BarEntry>())
+            put(REALM_FRAMEWORK_NAME, arrayListOf<BarEntry>())
+        }
     }
 
     private fun getFrameworkColor(framework: String): Int {
@@ -180,28 +175,9 @@ class MainActivity : Activity() {
         when (framework) {
             DBFLOW_FRAMEWORK_NAME -> return Color.rgb(0xE5, 0x73, 0x73) // red
             GREENDAO_FRAMEWORK_NAME -> return Color.rgb(0xBA, 0x68, 0xC8) // purple
-        /*
-            case AATester.FRAMEWORK_NAME:
-                return Color.rgb(0xF0, 0x62, 0x92); // pink
-            case OllieTester.FRAMEWORK_NAME:
-                return Color.rgb(0xFF, 0xA5, 0x00); // orange
-
-            case OrmLiteTester.FRAMEWORK_NAME:
-                return Color.rgb(0x4D, 0xB6, 0xAC); // teal
-            case SprinklesTester.FRAMEWORK_NAME:
-                return Color.rgb(0x79, 0x86, 0xCB); // indigo
-            case SugarTester.FRAMEWORK_NAME:
-                return Color.rgb(0x64, 0xB5, 0XF6); // blue
-            case RealmTester.FRAMEWORK_NAME:
-                return Color.rgb(0xAE, 0xD5, 0X81); // light green
-                */
+            REALM_FRAMEWORK_NAME -> return Color.rgb(0xAE, 0xD5, 0X81); // light green
             else -> return Color.WHITE
         }
-    }
-
-    private fun addChartData(framework: String, category: String, value: Long) {
-        val entry = BarEntry(value.toFloat(), (if (category == SAVE_TIME) 0 else 1).toFloat())
-        chartEntrySets.getValue(framework).add(entry)
     }
 
     private fun enableButtons(enabled: Boolean) {
@@ -222,12 +198,7 @@ class MainActivity : Activity() {
             val applicationContext = this@MainActivity.applicationContext
             testDBFlow()
             testGreenDao(applicationContext)
-            /*OrmLiteTester.testAddressItems(applicationContext);
-                OllieTester.testAddressItems(applicationContext);
-                RealmTester.testAddressItems(applicationContext);*/
-            //SprinklesTester.testAddressItems(applicationContext);
-            //AATester.testAddressItems(applicationContext);
-            //SugarTester.testAddressItems(applicationContext);
+            testRealmModels()
             EventBus.getDefault().post(TrialCompletedEvent(resources.getString(R.string.simple)))
         }).apply { start() }
     }
@@ -259,9 +230,7 @@ class MainActivity : Activity() {
         val LOAD_TIME = "Load"
         val SAVE_TIME = "Save"
 
-        const val LOOP_COUNT = 25000
-
-        val ADDRESS_BOOK_COUNT = 50
+        const val LOOP_COUNT = 5000
 
         private val STATE_MAPDATA = "mapData"
         private val STATE_RUNNING_TESTS = "runningTests"
