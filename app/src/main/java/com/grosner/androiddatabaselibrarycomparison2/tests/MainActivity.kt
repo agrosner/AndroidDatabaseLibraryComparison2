@@ -9,14 +9,20 @@ import com.github.mikephil.charting.data.BarEntry
 import com.grosner.androiddatabaselibrarycomparison2.R
 import com.grosner.androiddatabaselibrarycomparison2.dbflow.DBFLOW_FRAMEWORK_NAME
 import com.grosner.androiddatabaselibrarycomparison2.dbflow.testDBFlow
+import com.grosner.androiddatabaselibrarycomparison2.dbflow.testDBFlowPerformance
+import com.grosner.androiddatabaselibrarycomparison2.dbflow.testDBFlowPerformance2
 import com.grosner.androiddatabaselibrarycomparison2.events.LogTestDataEvent
 import com.grosner.androiddatabaselibrarycomparison2.events.TrialCompletedEvent
 import com.grosner.androiddatabaselibrarycomparison2.greendao.GREENDAO_FRAMEWORK_NAME
 import com.grosner.androiddatabaselibrarycomparison2.greendao.testGreenDao
+import com.grosner.androiddatabaselibrarycomparison2.greendao.testGreenDaoPerformance2
 import com.grosner.androiddatabaselibrarycomparison2.realm.REALM_FRAMEWORK_NAME
 import com.grosner.androiddatabaselibrarycomparison2.realm.testRealmModels
+import com.grosner.androiddatabaselibrarycomparison2.realm.testRealmModelsPerformance2
 import com.grosner.androiddatabaselibrarycomparison2.requery.REQUERY_FRAMEWORK_NAME
 import com.grosner.androiddatabaselibrarycomparison2.requery.testRequery
+import com.grosner.androiddatabaselibrarycomparison2.requery.testRequeryPerformance
+import com.grosner.androiddatabaselibrarycomparison2.requery.testRequeryPerformance2
 import org.greenrobot.eventbus.EventBus
 import org.jetbrains.anko.setContentView
 
@@ -121,6 +127,9 @@ class MainActivity : MainActivityComponentHandler, Activity() {
         runningTestName = testName
         runningTests = enabled
         viewModel.isLoading.value = enabled
+        if (enabled) {
+            resultsStringBuilder.setLength(0)
+        }
         if (runningTestName != null) {
             viewModel.resultsLabel.value = resources.getString(R.string.results, testName)
         }
@@ -163,34 +172,39 @@ class MainActivity : MainActivityComponentHandler, Activity() {
             runningTests = true
             val applicationContext = this@MainActivity.applicationContext
             testDBFlow()
-            testGreenDao(applicationContext)
             testRealmModels()
             testRequery(applicationContext)
+            testGreenDao(applicationContext)
             EventBus.getDefault().post(TrialCompletedEvent(resources.getString(R.string.simple)))
         }).apply { start() }
     }
 
-    /**
-     * runs complex benchmarks (onClick from R.id.complex)
-
-     * @param v button view
-     */
-    fun runComplexTrial(v: android.view.View) {
-        setBusyUI(true, resources.getString(com.grosner.androiddatabaselibrarycomparison2.R.string.complex))
+    override fun runPerformanceTrial() {
+        setBusyUI(true, resources.getString(R.string.performance))
         resetChart()
-        Thread(Runnable {
+        runTestThread = Thread(Runnable {
             runningTests = true
             val applicationContext = this@MainActivity.applicationContext
-            /*OrmLiteTester.testAddressBooks(applicationContext);
-                GreenDaoTester.testAddressBooks(applicationContext);
-                DBFlowTester.testAddressBooks(applicationContext);
-                OllieTester.testAddressBooks(applicationContext);
-                RealmTester.testAddressBooks(applicationContext);*/
-            //SprinklesTester.testAddressBooks(applicationContext);
-            //AATester.testAddressBooks(applicationContext);
-            //SugarTester.testAddressBooks(applicationContext);
-            EventBus.getDefault().post(TrialCompletedEvent(resources.getString(R.string.complex)))
-        }).start()
+            testDBFlowPerformance()
+            testRealmModels()
+            testRequeryPerformance(applicationContext)
+            testGreenDao(applicationContext)
+            EventBus.getDefault().post(TrialCompletedEvent(resources.getString(R.string.performance)))
+        }).apply { start() }
+    }
+
+    override fun runPerformanceTrial2() {
+        setBusyUI(true, resources.getString(R.string.performance2))
+        resetChart()
+        runTestThread = Thread(Runnable {
+            runningTests = true
+            val applicationContext = this@MainActivity.applicationContext
+            testDBFlowPerformance2()
+            testRealmModelsPerformance2()
+            testRequeryPerformance2(applicationContext)
+            testGreenDaoPerformance2(applicationContext)
+            EventBus.getDefault().post(TrialCompletedEvent(resources.getString(R.string.performance)))
+        }).apply { start() }
     }
 
     companion object {

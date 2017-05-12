@@ -17,6 +17,10 @@ import org.jetbrains.anko.custom.ankoView
 interface MainActivityComponentHandler {
 
     fun runSimpleTrial()
+
+    fun runPerformanceTrial()
+
+    fun runPerformanceTrial2();
 }
 
 class MainActivityViewModel : BaseObservable() {
@@ -51,6 +55,26 @@ class MainActivityComponent(var componentHandler: MainActivityComponentHandler?)
                     onClick { componentHandler?.runSimpleTrial() }
                 }
 
+                button {
+                    text = text(R.string.performance)
+                    bind { it.isLoading }.reverse().toView(this) { exp, value ->
+                        if (value != null) {
+                            exp.enabled = value
+                        }
+                    }
+                    onClick { componentHandler?.runPerformanceTrial() }
+                }
+
+                button {
+                    text = text(R.string.performance2)
+                    bind { it.isLoading }.reverse().toView(this) { exp, value ->
+                        if (value != null) {
+                            exp.enabled = value
+                        }
+                    }
+                    onClick { componentHandler?.runPerformanceTrial2() }
+                }
+
                 progressBar {
                     bind { it.isLoading }.onSelf().toViewVisibilityB(this)
                 }
@@ -70,6 +94,7 @@ class MainActivityComponent(var componentHandler: MainActivityComponentHandler?)
                 setFitBars(true)
                 animateXY(2000, 2000)
                 description = null
+                xAxis.labelCount = 0
                 bind { it.saveData }.on { it?.let { BarData(it) } }.toView(this) { exp, value ->
                     exp.data = value
                 }
@@ -82,6 +107,7 @@ class MainActivityComponent(var componentHandler: MainActivityComponentHandler?)
                 bind { it.isLoading }.reverse().toViewVisibilityB(this)
                 setFitBars(true)
                 animateXY(2000, 2000)
+                xAxis.labelCount = 0
                 description = null
                 bind { it.loadData }.on { it?.let { BarData(it) } }.toView(this) { exp, value ->
                     exp.data = value

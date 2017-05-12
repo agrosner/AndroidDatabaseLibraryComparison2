@@ -11,4 +11,8 @@ interface IPlayer {
     var age: Int
 
     var position: String
+
 }
+
+val IPlayer.printToString
+    get() = "Player2(id='$id', firstName='$firstName', lastName='$lastName', age=$age, position='$position')"

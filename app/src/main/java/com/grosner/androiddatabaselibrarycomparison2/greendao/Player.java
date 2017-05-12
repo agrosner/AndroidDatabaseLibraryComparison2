@@ -24,7 +24,7 @@ public class Player extends BaseModel implements IPlayer {
 
     @Generated(hash = 1169459112)
     public Player(String id, String firstName, String lastName, int age,
-            String position) {
+                  String position) {
         this.id = id;
         this.firstName = firstName;
         this.lastName = lastName;
@@ -89,6 +89,5 @@ public class Player extends BaseModel implements IPlayer {
     public void setPosition(@NotNull String s) {
         this.position = s;
     }
-
 
 }

@@ -16,4 +16,5 @@ open class Player : IPlayer, RealmObject() {
     override var age = 0
 
     override var position = ""
+
 }

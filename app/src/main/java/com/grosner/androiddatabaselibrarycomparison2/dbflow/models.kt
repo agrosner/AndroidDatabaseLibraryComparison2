@@ -12,9 +12,25 @@ object DBFlowDatabase {
     const val VERSION = 1
 }
 
+@Table(database = DBFlowDatabase::class, allFields = true)
+class Player : IPlayer, BaseModel() {
+
+    @PrimaryKey
+    override var id = ""
+
+    override var firstName = ""
+
+    override var lastName = ""
+
+    override var age = 0
+
+    override var position = ""
+
+}
+
 @Table(database = DBFlowDatabase::class, allFields = true, orderedCursorLookUp = true,
         assignDefaultValuesFromCursor = false, cachingEnabled = true, cacheSize = MainActivity.LOOP_COUNT)
-class Player : IPlayer, BaseModel() {
+class Player2 : IPlayer, BaseModel() {
 
     @PrimaryKey
     override var id = ""

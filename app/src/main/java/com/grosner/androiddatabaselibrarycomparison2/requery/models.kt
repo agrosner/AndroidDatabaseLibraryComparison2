@@ -17,3 +17,14 @@ interface Player : IPlayer {
     override var age: Int
     override var position: String
 }
+
+@Entity(cacheable = true)
+interface Player2 : IPlayer {
+
+    @get:Key
+    override var id: String
+    override var firstName: String
+    override var lastName: String
+    override var age: Int
+    override var position: String
+}
