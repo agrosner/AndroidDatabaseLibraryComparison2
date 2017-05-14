@@ -15,7 +15,6 @@ fun testDBFlow() {
     Delete.tables(Player::class.java)
 
     val list = randomPlayerList { Player() }
-    modelAdapter<Player>().modelCache.clear()
 
     var startTime = System.currentTimeMillis()
     databaseForTable<Player>().executeTransaction {
@@ -36,6 +35,11 @@ fun testDBFlowPerformance() {
     Delete.tables(Player2::class.java)
 
     val list = randomPlayerList { Player2() }
+    // preload these to cut down on time loaded.
+    modelAdapter<Player>().apply {
+        listModelSaver
+        listModelLoader
+    }
 
     var startTime = System.currentTimeMillis()
     databaseForTable<Player2>().executeTransaction {

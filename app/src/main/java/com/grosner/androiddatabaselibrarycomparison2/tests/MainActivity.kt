@@ -1,6 +1,7 @@
 package com.grosner.androiddatabaselibrarycomparison2.tests
 
 import android.app.Activity
+import android.graphics.Color
 import android.graphics.Color.WHITE
 import android.graphics.Color.rgb
 import android.util.Log
@@ -16,6 +17,8 @@ import com.grosner.androiddatabaselibrarycomparison2.events.TrialCompletedEvent
 import com.grosner.androiddatabaselibrarycomparison2.greendao.GREENDAO_FRAMEWORK_NAME
 import com.grosner.androiddatabaselibrarycomparison2.greendao.testGreenDao
 import com.grosner.androiddatabaselibrarycomparison2.greendao.testGreenDaoPerformance2
+import com.grosner.androiddatabaselibrarycomparison2.raw.RAW_FRAMEWORK_NAME
+import com.grosner.androiddatabaselibrarycomparison2.raw.testRawModels
 import com.grosner.androiddatabaselibrarycomparison2.realm.REALM_FRAMEWORK_NAME
 import com.grosner.androiddatabaselibrarycomparison2.realm.testRealmModels
 import com.grosner.androiddatabaselibrarycomparison2.realm.testRealmModelsPerformance2
@@ -112,7 +115,8 @@ class MainActivity : MainActivityComponentHandler, Activity() {
             REALM_FRAMEWORK_NAME -> 1
             REQUERY_FRAMEWORK_NAME -> 2
             GREENDAO_FRAMEWORK_NAME -> 3
-            else -> 4
+            RAW_FRAMEWORK_NAME -> 4
+            else -> 5
         }
         val entry = BarEntry(position.toFloat(), elapsedMsec.toFloat())
         entry.data = framework
@@ -156,6 +160,7 @@ class MainActivity : MainActivityComponentHandler, Activity() {
             GREENDAO_FRAMEWORK_NAME -> return rgb(0xBA, 0x68, 0xC8) // purple
             REALM_FRAMEWORK_NAME -> return rgb(0xAE, 0xD5, 0X81); // light green
             REQUERY_FRAMEWORK_NAME -> return rgb(0x79, 0x86, 0xCB) // indigo
+            RAW_FRAMEWORK_NAME -> return Color.YELLOW
             else -> return WHITE
         }
     }
@@ -175,6 +180,7 @@ class MainActivity : MainActivityComponentHandler, Activity() {
             testRealmModels()
             testRequery(applicationContext)
             testGreenDao(applicationContext)
+            testRawModels(applicationContext)
             EventBus.getDefault().post(TrialCompletedEvent(resources.getString(R.string.simple)))
         }).apply { start() }
     }
@@ -189,6 +195,7 @@ class MainActivity : MainActivityComponentHandler, Activity() {
             testRealmModels()
             testRequeryPerformance(applicationContext)
             testGreenDao(applicationContext)
+            testRawModels(applicationContext)
             EventBus.getDefault().post(TrialCompletedEvent(resources.getString(R.string.performance)))
         }).apply { start() }
     }
@@ -203,6 +210,7 @@ class MainActivity : MainActivityComponentHandler, Activity() {
             testRealmModelsPerformance2()
             testRequeryPerformance2(applicationContext)
             testGreenDaoPerformance2(applicationContext)
+            testRawModels(applicationContext)
             EventBus.getDefault().post(TrialCompletedEvent(resources.getString(R.string.performance)))
         }).apply { start() }
     }
