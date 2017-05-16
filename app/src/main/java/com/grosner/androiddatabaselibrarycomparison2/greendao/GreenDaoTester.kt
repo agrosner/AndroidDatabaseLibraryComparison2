@@ -1,54 +1,34 @@
 package com.grosner.androiddatabaselibrarycomparison2.greendao
 
 import android.content.Context
-import com.grosner.androiddatabaselibrarycomparison2.events.LogTestDataEvent
-import com.grosner.androiddatabaselibrarycomparison2.tests.MainActivity
+import com.grosner.androiddatabaselibrarycomparison2.tests.BaseTest
 import com.grosner.androiddatabaselibrarycomparison2.tests.printToString
-import com.grosner.androiddatabaselibrarycomparison2.tests.randomPlayerList
-import org.greenrobot.eventbus.EventBus
 
 val GREENDAO_FRAMEWORK_NAME = "GreenDao"
 
-fun testGreenDao(ctx: Context) {
+open class GreenDaoTest(ctx: Context) : BaseTest<Player>(playerCreator = { Player() },
+        frameworkName = GREENDAO_FRAMEWORK_NAME) {
 
     val helper = DaoMaster.DevOpenHelper(ctx, "greendao-db")
-    val db = helper.writableDb
-    val daoSession = DaoMaster(db).newSession()
+    val db = helper.writableDb!!
+    val daoSession = DaoMaster(db).newSession()!!
+    val playerDao = daoSession.playerDao!!
 
-    val playerDao = daoSession.playerDao
-    playerDao.deleteAll()
+    override fun insert() {
+        playerDao.insertInTx(list)
+    }
 
-    val list = randomPlayerList { Player() }
+    override fun load() {
+        playerDao.loadAll()
+    }
 
-    var startTime = System.currentTimeMillis()
-    playerDao.insertInTx(list)
-    EventBus.getDefault().post(LogTestDataEvent(startTime, GREENDAO_FRAMEWORK_NAME, MainActivity.SAVE_TIME))
-
-    startTime = System.currentTimeMillis()
-    playerDao.loadAll()
-    EventBus.getDefault().post(LogTestDataEvent(startTime, GREENDAO_FRAMEWORK_NAME, MainActivity.LOAD_TIME))
-
-    playerDao.deleteAll()
+    override fun delete() {
+        playerDao.deleteAll()
+    }
 }
 
-fun testGreenDaoPerformance2(ctx: Context) {
-
-    val helper = DaoMaster.DevOpenHelper(ctx, "greendao-db")
-    val db = helper.writableDb
-    val daoSession = DaoMaster(db).newSession()
-
-    val playerDao = daoSession.playerDao
-    playerDao.deleteAll()
-
-    val list = randomPlayerList { Player() }
-
-    var startTime = System.currentTimeMillis()
-    playerDao.insertInTx(list)
-    EventBus.getDefault().post(LogTestDataEvent(startTime, GREENDAO_FRAMEWORK_NAME, MainActivity.SAVE_TIME))
-
-    startTime = System.currentTimeMillis()
-    playerDao.queryBuilder().listLazy().forEach { it.printToString }
-    EventBus.getDefault().post(LogTestDataEvent(startTime, GREENDAO_FRAMEWORK_NAME, MainActivity.LOAD_TIME))
-
-    playerDao.deleteAll()
+class GreenDaoTestPerformance2(ctx: Context) : GreenDaoTest(ctx) {
+    override fun load() {
+        playerDao.queryBuilder().listLazy().forEach { it.printToString }
+    }
 }

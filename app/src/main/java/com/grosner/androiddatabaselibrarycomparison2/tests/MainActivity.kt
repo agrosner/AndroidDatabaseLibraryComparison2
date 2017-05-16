@@ -9,24 +9,22 @@ import com.github.mikephil.charting.data.BarDataSet
 import com.github.mikephil.charting.data.BarEntry
 import com.grosner.androiddatabaselibrarycomparison2.R
 import com.grosner.androiddatabaselibrarycomparison2.dbflow.DBFLOW_FRAMEWORK_NAME
-import com.grosner.androiddatabaselibrarycomparison2.dbflow.testDBFlow
-import com.grosner.androiddatabaselibrarycomparison2.dbflow.testDBFlowPerformance
-import com.grosner.androiddatabaselibrarycomparison2.dbflow.testDBFlowPerformance2
-import com.grosner.androiddatabaselibrarycomparison2.events.LogTestDataEvent
-import com.grosner.androiddatabaselibrarycomparison2.events.TrialCompletedEvent
+import com.grosner.androiddatabaselibrarycomparison2.dbflow.DBFlowTest
+import com.grosner.androiddatabaselibrarycomparison2.dbflow.DBFlowTestPerformance
+import com.grosner.androiddatabaselibrarycomparison2.dbflow.DBFlowTestPerformance2
 import com.grosner.androiddatabaselibrarycomparison2.greendao.GREENDAO_FRAMEWORK_NAME
-import com.grosner.androiddatabaselibrarycomparison2.greendao.testGreenDao
-import com.grosner.androiddatabaselibrarycomparison2.greendao.testGreenDaoPerformance2
+import com.grosner.androiddatabaselibrarycomparison2.greendao.GreenDaoTest
+import com.grosner.androiddatabaselibrarycomparison2.greendao.GreenDaoTestPerformance2
 import com.grosner.androiddatabaselibrarycomparison2.raw.RAW_FRAMEWORK_NAME
-import com.grosner.androiddatabaselibrarycomparison2.raw.testRawModels
+import com.grosner.androiddatabaselibrarycomparison2.raw.RawTest
+import com.grosner.androiddatabaselibrarycomparison2.raw.RawTestPerformance2
 import com.grosner.androiddatabaselibrarycomparison2.realm.REALM_FRAMEWORK_NAME
-import com.grosner.androiddatabaselibrarycomparison2.realm.testRealmModels
-import com.grosner.androiddatabaselibrarycomparison2.realm.testRealmModelsPerformance2
+import com.grosner.androiddatabaselibrarycomparison2.realm.RealmDefault
+import com.grosner.androiddatabaselibrarycomparison2.realm.RealmPerformance
 import com.grosner.androiddatabaselibrarycomparison2.requery.REQUERY_FRAMEWORK_NAME
-import com.grosner.androiddatabaselibrarycomparison2.requery.testRequery
-import com.grosner.androiddatabaselibrarycomparison2.requery.testRequeryPerformance
-import com.grosner.androiddatabaselibrarycomparison2.requery.testRequeryPerformance2
-import org.greenrobot.eventbus.EventBus
+import com.grosner.androiddatabaselibrarycomparison2.requery.RequeryTest
+import com.grosner.androiddatabaselibrarycomparison2.requery.RequeryTestPerformance
+import com.grosner.androiddatabaselibrarycomparison2.requery.RequeryTestPerformance2
 import org.jetbrains.anko.setContentView
 
 class MainActivity : MainActivityComponentHandler, Activity() {
@@ -37,6 +35,8 @@ class MainActivity : MainActivityComponentHandler, Activity() {
     private var runningTestName: String? = ""
     private var runTestThread: Thread? = null
     private val resultsStringBuilder = StringBuilder()
+
+    private var resultMap = mutableMapOf<String, MutableSet<Result>>()
 
     private val viewModel = MainActivityViewModel()
 
@@ -71,28 +71,49 @@ class MainActivity : MainActivityComponentHandler, Activity() {
     }
 
 
-    public override fun onStart() {
-        super.onStart()
-        EventBus.getDefault().register(this)
-    }
+    fun trialCompleted(trialName: String) {
 
-    public override fun onStop() {
-        EventBus.getDefault().unregister(this)
-        super.onStop()
-    }
+        resultMap.forEach { name, set ->
+            val position = when (name) {
+                DBFLOW_FRAMEWORK_NAME -> 0
+                REALM_FRAMEWORK_NAME -> 1
+                REQUERY_FRAMEWORK_NAME -> 2
+                GREENDAO_FRAMEWORK_NAME -> 3
+                RAW_FRAMEWORK_NAME -> 4
+                else -> 5
+            }
 
-    // handle data collection event
-    @org.greenrobot.eventbus.Subscribe
-    fun onEvent(event: LogTestDataEvent) {
-        logTime(event.startTime, event.framework, event.eventName)
-    }
+            val (_, insertTime, loadTime) = calculateAverage(name)
 
-    // handle graphing event
-    @org.greenrobot.eventbus.Subscribe(threadMode = org.greenrobot.eventbus.ThreadMode.MAIN)
-    fun onEventMainThread(event: TrialCompletedEvent) {
+            resultsStringBuilder.append("$name insert AVG: $insertTime msec\n")
+            resultsStringBuilder.append("$name load AVG: $loadTime msec\n")
+
+            chartSave.add(BarEntry(position.toFloat(), insertTime.toFloat()).apply { data = name })
+            chartLoad.add(BarEntry(position.toFloat(), loadTime.toFloat()).apply { data = name })
+        }
+
+        runOnUiThread {
+            viewModel.runningDisplayText.value = resultsStringBuilder.toString()
+            viewModel.resultsCount.value = viewModel.resultsCount.value + 1
+        }
         initChart()
         runningTests = false
-        setBusyUI(false, event.trialName)
+        setBusyUI(false, trialName)
+    }
+
+    fun calculateAverage(framework: String): Result {
+
+        val set = resultMap.getValue(framework)
+
+        var insertTime: Double = 0.0
+        var loadTime: Double = 0.0
+        set.forEach {
+            loadTime += it.loadStartTime
+            insertTime += it.insertStartTime
+        }
+        insertTime /= set.size.toDouble()
+        loadTime /= set.size.toDouble()
+        return Result(framework, insertTime.toLong(), loadTime.toLong())
     }
 
     /**
@@ -104,38 +125,30 @@ class MainActivity : MainActivityComponentHandler, Activity() {
      * *
      * @param name      string to log for event
      */
-    fun logTime(startTime: Long, framework: String, name: String) {
-        Log.e(MainActivity::class.java.simpleName, name + " took: " + (System.currentTimeMillis() - startTime))
-        val elapsedMsec = if (startTime == -1L) 0 else System.currentTimeMillis() - startTime
-        resultsStringBuilder.append("$framework $name took: $elapsedMsec msec\n")
-        runOnUiThread { viewModel.runningDisplayText.value = resultsStringBuilder.toString() }
+    fun logTime(result: Result) {
+        val (name, insertStartTime, loadStartTime) = result
+        Log.e(MainActivity::class.java.simpleName, name + " took: " + (insertStartTime + loadStartTime))
         // update chart data
-        val position = when (framework) {
-            DBFLOW_FRAMEWORK_NAME -> 0
-            REALM_FRAMEWORK_NAME -> 1
-            REQUERY_FRAMEWORK_NAME -> 2
-            GREENDAO_FRAMEWORK_NAME -> 3
-            RAW_FRAMEWORK_NAME -> 4
-            else -> 5
+        var set: MutableSet<Result>? = resultMap[name]
+        if (set == null) {
+            set = mutableSetOf<Result>()
+            resultMap[name] = set
         }
-        val entry = BarEntry(position.toFloat(), elapsedMsec.toFloat())
-        entry.data = framework
-        if (name == SAVE_TIME) {
-            chartSave.add(entry)
-        } else {
-            chartLoad.add(entry)
-        }
+        set.add(result)
+
     }
 
     private fun setBusyUI(enabled: Boolean, testName: String) {
         runningTestName = testName
         runningTests = enabled
-        viewModel.isLoading.value = enabled
-        if (enabled) {
-            resultsStringBuilder.setLength(0)
-        }
-        if (runningTestName != null) {
-            viewModel.resultsLabel.value = resources.getString(R.string.results, testName)
+        runOnUiThread {
+            viewModel.isLoading.value = enabled
+            if (enabled) {
+                resultsStringBuilder.setLength(0)
+            }
+            if (runningTestName != null) {
+                viewModel.resultsLabel.value = resources.getString(R.string.results, testName)
+            }
         }
     }
 
@@ -145,12 +158,9 @@ class MainActivity : MainActivityComponentHandler, Activity() {
     }
 
     private fun resetChart() {
-        with(chartSave) {
-            clear()
-        }
-        with(chartLoad) {
-            clear()
-        }
+        chartSave.clear()
+        chartLoad.clear()
+        resultMap.clear()
     }
 
     private fun getFrameworkColor(framework: String): Int {
@@ -175,13 +185,15 @@ class MainActivity : MainActivityComponentHandler, Activity() {
         resetChart()
         runTestThread = Thread(Runnable {
             runningTests = true
-            val applicationContext = this@MainActivity.applicationContext
-            testDBFlow()
-            testRealmModels()
-            testRequery(applicationContext)
-            testGreenDao(applicationContext)
-            testRawModels(applicationContext)
-            EventBus.getDefault().post(TrialCompletedEvent(resources.getString(R.string.simple)))
+            (0..15).forEach {
+                val applicationContext = this@MainActivity.applicationContext
+                logTime(DBFlowTest().test())
+                logTime(RealmDefault().test())
+                logTime(RequeryTest(applicationContext).test())
+                logTime(GreenDaoTest(applicationContext).test())
+                logTime(RawTest(applicationContext).test())
+            }
+            trialCompleted(resources.getString(R.string.simple))
         }).apply { start() }
     }
 
@@ -191,12 +203,14 @@ class MainActivity : MainActivityComponentHandler, Activity() {
         runTestThread = Thread(Runnable {
             runningTests = true
             val applicationContext = this@MainActivity.applicationContext
-            testDBFlowPerformance()
-            testRealmModels()
-            testRequeryPerformance(applicationContext)
-            testGreenDao(applicationContext)
-            testRawModels(applicationContext)
-            EventBus.getDefault().post(TrialCompletedEvent(resources.getString(R.string.performance)))
+            (0..15).forEach {
+                logTime(DBFlowTestPerformance().test())
+                logTime(RealmDefault().test())
+                logTime(RequeryTestPerformance(applicationContext).test())
+                logTime(GreenDaoTest(applicationContext).test())
+                logTime(RawTest(applicationContext).test())
+            }
+            trialCompleted(resources.getString(R.string.performance))
         }).apply { start() }
     }
 
@@ -206,12 +220,14 @@ class MainActivity : MainActivityComponentHandler, Activity() {
         runTestThread = Thread(Runnable {
             runningTests = true
             val applicationContext = this@MainActivity.applicationContext
-            testDBFlowPerformance2()
-            testRealmModelsPerformance2()
-            testRequeryPerformance2(applicationContext)
-            testGreenDaoPerformance2(applicationContext)
-            testRawModels(applicationContext)
-            EventBus.getDefault().post(TrialCompletedEvent(resources.getString(R.string.performance)))
+            (0..15).forEach {
+                logTime(DBFlowTestPerformance2().test())
+                logTime(RealmPerformance().test())
+                logTime(RequeryTestPerformance2(applicationContext).test())
+                logTime(GreenDaoTestPerformance2(applicationContext).test())
+                logTime(RawTestPerformance2(applicationContext).test())
+            }
+            trialCompleted(resources.getString(R.string.performance))
         }).apply { start() }
     }
 

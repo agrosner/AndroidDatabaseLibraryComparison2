@@ -16,7 +16,7 @@ android {
     }
 }
 
-def dbflow_version = "4.0.1"
+def dbflow_version = "4.0.2"
 
 dependencies {
     compile 'com.android.support:appcompat-v7:25.3.1'
@@ -33,7 +33,6 @@ dependencies {
     compile "org.jetbrains.kotlin:kotlin-stdlib-jre7:$kotlin_version"
     compile 'com.github.PhilJay:MPAndroidChart:v3.0.2'
 
-    compile 'org.greenrobot:eventbus:3.0.0'
     compile 'org.greenrobot:greendao:3.2.2'
 
     compile 'org.jetbrains.anko:anko-sdk15:0.9.1' // current version of anko used

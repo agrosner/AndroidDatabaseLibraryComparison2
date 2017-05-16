@@ -1,78 +1,64 @@
 package com.grosner.androiddatabaselibrarycomparison2.dbflow
 
-import com.grosner.androiddatabaselibrarycomparison2.events.LogTestDataEvent
-import com.grosner.androiddatabaselibrarycomparison2.tests.MainActivity
-import com.grosner.androiddatabaselibrarycomparison2.tests.printToString
-import com.grosner.androiddatabaselibrarycomparison2.tests.randomPlayerList
+import com.grosner.androiddatabaselibrarycomparison2.tests.*
 import com.raizlabs.android.dbflow.kotlinextensions.*
 import com.raizlabs.android.dbflow.sql.language.Delete
-import org.greenrobot.eventbus.EventBus
 
 val DBFLOW_FRAMEWORK_NAME = "DBFlow"
 
-fun testDBFlow() {
-
-    Delete.tables(Player::class.java)
-
-    val list = randomPlayerList { Player() }
-
-    var startTime = System.currentTimeMillis()
-    databaseForTable<Player>().executeTransaction {
-        modelAdapter<Player>().insertAll(list)
-    }
-    EventBus.getDefault().post(LogTestDataEvent(startTime, DBFLOW_FRAMEWORK_NAME, MainActivity.SAVE_TIME))
-
-    startTime = System.currentTimeMillis()
-    (select from Player::class).list
-    EventBus.getDefault().post(LogTestDataEvent(startTime, DBFLOW_FRAMEWORK_NAME, MainActivity.LOAD_TIME))
-
-    Delete.tables(Player::class.java)
-    modelAdapter<Player>().modelCache.clear()
-}
-
-fun testDBFlowPerformance() {
-
-    Delete.tables(Player2::class.java)
-
-    val list = randomPlayerList { Player2() }
-    // preload these to cut down on time loaded.
-    modelAdapter<Player>().apply {
-        listModelSaver
-        listModelLoader
+open class DBFlowTest : BaseTest<Player>(playerCreator = { Player() },
+        frameworkName = DBFLOW_FRAMEWORK_NAME) {
+    override fun init() {
     }
 
-    var startTime = System.currentTimeMillis()
-    databaseForTable<Player2>().executeTransaction {
-        modelAdapter<Player2>().insertAll(list)
-    }
-    EventBus.getDefault().post(LogTestDataEvent(startTime, DBFLOW_FRAMEWORK_NAME, MainActivity.SAVE_TIME))
-
-    startTime = System.currentTimeMillis()
-    (select from Player2::class).list
-    EventBus.getDefault().post(LogTestDataEvent(startTime, DBFLOW_FRAMEWORK_NAME, MainActivity.LOAD_TIME))
-
-    Delete.tables(Player::class.java)
-}
-
-fun testDBFlowPerformance2() {
-
-    Delete.tables(Player2::class.java)
-
-    val list = randomPlayerList { Player2() }
-
-    var startTime = System.currentTimeMillis()
-    databaseForTable<Player2>().executeTransaction {
-        modelAdapter<Player2>().insertAll(list)
-    }
-    EventBus.getDefault().post(LogTestDataEvent(startTime, DBFLOW_FRAMEWORK_NAME, MainActivity.SAVE_TIME))
-
-    startTime = System.currentTimeMillis()
-    (select from Player2::class).cursorResult.use {
-        it.iterator().forEach {
-            it.printToString
+    override fun insert() {
+        databaseForTable<Player>().executeTransaction {
+            modelAdapter<Player>().insertAll(list)
         }
     }
-    EventBus.getDefault().post(LogTestDataEvent(startTime, DBFLOW_FRAMEWORK_NAME, MainActivity.LOAD_TIME))
 
-    Delete.tables(Player::class.java)
+    override fun load() {
+        (select from Player::class).list
+    }
+
+    override fun delete() {
+        Delete.tables(Player::class.java)
+    }
+}
+
+open class DBFlowTestPerformance : BaseTest<Player2>(playerCreator = { Player2() },
+        frameworkName = DBFLOW_FRAMEWORK_NAME) {
+    override fun init() {
+        // preload these to cut down on time loaded.
+        modelAdapter<Player>().apply {
+            listModelSaver
+            listModelLoader
+        }
+    }
+
+
+    override fun insert() {
+        databaseForTable<Player2>().executeTransaction {
+            modelAdapter<Player2>().insertAll(list)
+        }
+    }
+
+    override fun load() {
+        (select from Player2::class).list
+    }
+
+    override fun delete() {
+        delete<Player2>().execute()
+    }
+}
+
+
+class DBFlowTestPerformance2 : DBFlowTestPerformance() {
+    override fun load() {
+        (select from Player2::class).cursorResult.use {
+            it.iterator().forEach {
+                it.printToString
+            }
+        }
+    }
 }
