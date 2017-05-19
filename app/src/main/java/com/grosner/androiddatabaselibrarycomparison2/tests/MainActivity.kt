@@ -25,6 +25,8 @@ import com.grosner.androiddatabaselibrarycomparison2.requery.REQUERY_FRAMEWORK_N
 import com.grosner.androiddatabaselibrarycomparison2.requery.RequeryTest
 import com.grosner.androiddatabaselibrarycomparison2.requery.RequeryTestPerformance
 import com.grosner.androiddatabaselibrarycomparison2.requery.RequeryTestPerformance2
+import com.grosner.androiddatabaselibrarycomparison2.room.ROOM_FRAMEWORK_NAME
+import com.grosner.androiddatabaselibrarycomparison2.room.RoomTest
 import org.jetbrains.anko.setContentView
 
 class MainActivity : MainActivityComponentHandler, Activity() {
@@ -76,11 +78,12 @@ class MainActivity : MainActivityComponentHandler, Activity() {
         resultMap.forEach { name, set ->
             val position = when (name) {
                 DBFLOW_FRAMEWORK_NAME -> 0
-                REALM_FRAMEWORK_NAME -> 1
-                REQUERY_FRAMEWORK_NAME -> 2
-                GREENDAO_FRAMEWORK_NAME -> 3
-                RAW_FRAMEWORK_NAME -> 4
-                else -> 5
+                ROOM_FRAMEWORK_NAME -> 1
+                REALM_FRAMEWORK_NAME -> 2
+                REQUERY_FRAMEWORK_NAME -> 3
+                GREENDAO_FRAMEWORK_NAME -> 4
+                RAW_FRAMEWORK_NAME -> 5
+                else -> 6
             }
 
             val (_, insertTime, loadTime) = calculateAverage(name)
@@ -171,6 +174,7 @@ class MainActivity : MainActivityComponentHandler, Activity() {
             REALM_FRAMEWORK_NAME -> return rgb(0xAE, 0xD5, 0X81); // light green
             REQUERY_FRAMEWORK_NAME -> return rgb(0x79, 0x86, 0xCB) // indigo
             RAW_FRAMEWORK_NAME -> return Color.YELLOW
+            ROOM_FRAMEWORK_NAME -> return Color.GRAY
             else -> return WHITE
         }
     }
@@ -188,6 +192,7 @@ class MainActivity : MainActivityComponentHandler, Activity() {
             (0..15).forEach {
                 val applicationContext = this@MainActivity.applicationContext
                 logTime(DBFlowTest().test())
+                logTime(RoomTest(applicationContext).test())
                 logTime(RealmDefault().test())
                 logTime(RequeryTest(applicationContext).test())
                 logTime(GreenDaoTest(applicationContext).test())
@@ -205,6 +210,7 @@ class MainActivity : MainActivityComponentHandler, Activity() {
             val applicationContext = this@MainActivity.applicationContext
             (0..15).forEach {
                 logTime(DBFlowTestPerformance().test())
+                logTime(RoomTest(applicationContext).test())
                 logTime(RealmDefault().test())
                 logTime(RequeryTestPerformance(applicationContext).test())
                 logTime(GreenDaoTest(applicationContext).test())
@@ -222,6 +228,7 @@ class MainActivity : MainActivityComponentHandler, Activity() {
             val applicationContext = this@MainActivity.applicationContext
             (0..15).forEach {
                 logTime(DBFlowTestPerformance2().test())
+                logTime(RoomTest(applicationContext).test())
                 logTime(RealmPerformance().test())
                 logTime(RequeryTestPerformance2(applicationContext).test())
                 logTime(GreenDaoTestPerformance2(applicationContext).test())
