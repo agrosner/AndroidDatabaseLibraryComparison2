@@ -75,7 +75,7 @@ class MainActivity : MainActivityComponentHandler, Activity() {
 
     fun trialCompleted(trialName: String) {
 
-        resultMap.forEach { name, set ->
+        resultMap.forEach { name, _ ->
             val position = when (name) {
                 DBFLOW_FRAMEWORK_NAME -> 0
                 ROOM_FRAMEWORK_NAME -> 1
@@ -108,11 +108,12 @@ class MainActivity : MainActivityComponentHandler, Activity() {
         var insertTime: Double = 0.0
         var loadTime: Double = 0.0
         set.forEach {
-            loadTime += it.loadStartTime
-            insertTime += it.insertStartTime
+            loadTime += it.loadTime
+            insertTime += it.insertTime
         }
-        insertTime /= set.size.toDouble()
-        loadTime /= set.size.toDouble()
+        val testCount = set.size.toDouble()
+        insertTime /= testCount
+        loadTime /= testCount
         return Result(framework, insertTime.toLong(), loadTime.toLong())
     }
 
@@ -126,8 +127,8 @@ class MainActivity : MainActivityComponentHandler, Activity() {
      * @param name      string to log for event
      */
     fun logTime(result: Result) {
-        val (name, insertStartTime, loadStartTime) = result
-        Log.e(MainActivity::class.java.simpleName, name + " took: " + (insertStartTime + loadStartTime))
+        val (name) = result
+        Log.e(MainActivity::class.java.simpleName, name + " took: " + (result.totalTime))
         // update chart data
         var set: MutableSet<Result>? = resultMap[name]
         if (set == null) {
@@ -141,13 +142,14 @@ class MainActivity : MainActivityComponentHandler, Activity() {
     private fun setBusyUI(enabled: Boolean, testName: String) {
         runningTestName = testName
         runningTests = enabled
-        viewModel.isLoading.value = enabled
-        if (enabled) {
-            viewModel.hasLoaded.value = false
-            resultsStringBuilder.setLength(0)
-        }
-        if (runningTestName != null) {
-            viewModel.resultsLabel.value = resources.getString(R.string.results, testName)
+        viewModel.apply {
+            currentTest.value = testName
+            isLoading.value = enabled
+            if (enabled) {
+                hasLoaded.value = false
+                resultsStringBuilder.setLength(0)
+            }
+            resultsLabel.value = resources.getString(R.string.results, testName)
         }
     }
 
@@ -160,6 +162,7 @@ class MainActivity : MainActivityComponentHandler, Activity() {
             BarDataSet(listOf(it), it.data.toString())
                     .apply { color = getFrameworkColor(it.data.toString()) }
         }
+
     }
 
     private fun resetChart() {
@@ -192,57 +195,43 @@ class MainActivity : MainActivityComponentHandler, Activity() {
      * @param v button view
      */
     override fun runSimpleTrial() {
-        setBusyUI(true, resources.getString(com.grosner.androiddatabaselibrarycomparison2.R.string.simple))
-        resetChart()
-        runTestThread = Thread(Runnable {
-            runningTests = true
-            (0..15).forEach {
-                val applicationContext = this@MainActivity.applicationContext
-                logTime(DBFlowTest().test())
-                logTime(RoomTest(applicationContext).test())
-                logTime(RealmDefault().test())
-                logTime(RequeryTest(applicationContext).test())
-                logTime(GreenDaoTest(applicationContext).test())
-                logTime(RawTest(applicationContext).test())
-                logTrial()
-            }
-            trialCompleted(resources.getString(R.string.simple))
-        }).apply { start() }
+        runTest(resources.getString(R.string.simple), DBFlowTest(),
+                RoomTest(applicationContext),
+                RealmDefault(),
+                RequeryTest(applicationContext),
+                GreenDaoTest(applicationContext),
+                RawTest(applicationContext))
     }
 
     override fun runPerformanceTrial() {
-        setBusyUI(true, resources.getString(R.string.performance))
-        resetChart()
-        runTestThread = Thread(Runnable {
-            runningTests = true
-            val applicationContext = this@MainActivity.applicationContext
-            (0..15).forEach {
-                logTime(DBFlowTestPerformance().test())
-                logTime(RoomTest(applicationContext).test())
-                logTime(RealmDefault().test())
-                logTime(RequeryTestPerformance(applicationContext).test())
-                logTime(GreenDaoTest(applicationContext).test())
-                logTime(RawTest(applicationContext).test())
-            }
-            trialCompleted(resources.getString(R.string.performance))
-        }).apply { start() }
+        runTest(resources.getString(R.string.performance), DBFlowTestPerformance(),
+                RoomTest(applicationContext),
+                RealmDefault(),
+                RequeryTestPerformance(applicationContext),
+                GreenDaoTest(applicationContext),
+                RawTest(applicationContext))
     }
 
     override fun runPerformanceTrial2() {
-        setBusyUI(true, resources.getString(R.string.performance2))
+        runTest(resources.getString(R.string.performance2),
+                DBFlowTestPerformance2(),
+                RoomTest(applicationContext),
+                RealmPerformance(),
+                RequeryTestPerformance2(applicationContext),
+                GreenDaoTestPerformance2(applicationContext),
+                RawTestPerformance2(applicationContext))
+    }
+
+    fun runTest(testName: String, vararg tests: BaseTest<*>) {
+        setBusyUI(true, testName)
         resetChart()
         runTestThread = Thread(Runnable {
             runningTests = true
-            val applicationContext = this@MainActivity.applicationContext
-            (0..15).forEach {
-                logTime(DBFlowTestPerformance2().test())
-                logTime(RoomTest(applicationContext).test())
-                logTime(RealmPerformance().test())
-                logTime(RequeryTestPerformance2(applicationContext).test())
-                logTime(GreenDaoTestPerformance2(applicationContext).test())
-                logTime(RawTestPerformance2(applicationContext).test())
+            (0 until TEST_COUNT).forEach {
+                tests.forEach { logTime(it.test()) }
+                logTrial()
             }
-            trialCompleted(resources.getString(R.string.performance))
+            trialCompleted(testName)
         }).apply { start() }
     }
 

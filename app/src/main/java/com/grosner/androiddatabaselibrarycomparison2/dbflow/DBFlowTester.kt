@@ -22,7 +22,7 @@ open class DBFlowTest : BaseTest<Player>(playerCreator = { Player() },
     }
 
     override fun delete() {
-        Delete.tables(Player::class.java)
+        delete<Player>().execute()
     }
 }
 

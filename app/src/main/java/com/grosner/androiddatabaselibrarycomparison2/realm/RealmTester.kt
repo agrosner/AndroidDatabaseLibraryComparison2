@@ -27,7 +27,7 @@ open class RealmDefault : BaseTest<Player>(playerCreator = { Player() },
 
     override fun delete() {
         realm.executeTransaction {
-            realm.deleteAll()
+            realm.where(Player::class.java).findAll().deleteAllFromRealm()
         }
     }
 }

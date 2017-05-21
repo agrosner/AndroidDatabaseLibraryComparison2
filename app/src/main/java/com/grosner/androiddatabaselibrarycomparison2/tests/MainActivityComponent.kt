@@ -4,21 +4,21 @@ import android.graphics.Color
 import android.support.design.widget.AppBarLayout
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
 import android.view.ViewGroup.LayoutParams.WRAP_CONTENT
-import com.andrewgrosner.kbinding.BaseObservable
+import android.widget.LinearLayout
 import com.andrewgrosner.kbinding.anko.BindingComponent
 import com.andrewgrosner.kbinding.bindings.*
 import com.andrewgrosner.kbinding.observable
 import com.andrewgrosner.kbinding.viewextensions.text
-import com.github.mikephil.charting.charts.BarChart
-import com.github.mikephil.charting.data.BarData
 import com.github.mikephil.charting.data.BarDataSet
 import com.grosner.androiddatabaselibrarycomparison2.R
 import org.jetbrains.anko.*
 import org.jetbrains.anko.appcompat.v7.linearLayoutCompat
-import org.jetbrains.anko.appcompat.v7.toolbar
-import org.jetbrains.anko.design.appBarLayout
-import org.jetbrains.anko.design.coordinatorLayout
-import org.jetbrains.anko.support.v4.nestedScrollView
+import org.jetbrains.anko.appcompat.v7.themedTintedTextView
+import org.jetbrains.anko.appcompat.v7.themedToolbar
+import org.jetbrains.anko.design.themedAppBarLayout
+import org.jetbrains.anko.design.themedCoordinatorLayout
+import org.jetbrains.anko.design.themedTabLayout
+import org.jetbrains.anko.support.v4.themedNestedScrollView
 
 interface MainActivityComponentHandler {
 
@@ -27,9 +27,10 @@ interface MainActivityComponentHandler {
     fun runPerformanceTrial()
 
     fun runPerformanceTrial2()
+
 }
 
-class MainActivityViewModel : BaseObservable() {
+class MainActivityViewModel {
 
     val isLoading = observable(false)
 
@@ -40,12 +41,15 @@ class MainActivityViewModel : BaseObservable() {
     val resultsLabel = observable("")
 
     val saveData = observable<List<BarDataSet>?>(null)
-
     val loadData = observable<List<BarDataSet>?>(null)
 
     val resultsCount = observable(0)
 
     val testIndex = observable(-1)
+
+    val chartIndex = observable(0)
+
+    val currentTest = observable("No Test")
 }
 
 /**
@@ -54,9 +58,9 @@ class MainActivityViewModel : BaseObservable() {
 class MainActivityComponent(var componentHandler: MainActivityComponentHandler?)
     : BindingComponent<MainActivity, MainActivityViewModel>() {
     override fun createViewWithBindings(ui: AnkoContext<MainActivity>) = with(ui) {
-        coordinatorLayout {
-            appBarLayout {
-                toolbar {
+        themedCoordinatorLayout {
+            themedAppBarLayout {
+                themedToolbar {
                     title = "Database Comparisons"
                     setTitleTextColor(Color.WHITE)
                 }
@@ -68,100 +72,93 @@ class MainActivityComponent(var componentHandler: MainActivityComponentHandler?)
                 }
 
             }.lparams(width = MATCH_PARENT, height = WRAP_CONTENT)
-            nestedScrollView {
+            themedNestedScrollView {
                 coordinatorLParams(width = MATCH_PARENT, height = MATCH_PARENT,
                         behavior = AppBarLayout.ScrollingViewBehavior())
                 verticalLayout {
 
                     linearLayoutCompat {
-                        button {
-                            text = text(R.string.simple)
-                            bind { it.isLoading }.reverse().toView(this) { exp, value ->
-                                value?.let { exp.isEnabled = value }
-                            }
-                            bind { it.testIndex }.on { it == 0 || it == -1 }
-                                    .toViewVisibilityB(this)
-                            setOnClickListener {
-                                componentHandler?.runSimpleTrial()
-                            }
+                        themedTintedTextView {
+                            bindSelf { it.isLoading }.toViewVisibilityB(this)
+                            bind { it.currentTest }.on { "Running: $it" }.toText(this)
+                            textSize = 18.0f
                         }
 
-                        button {
+                        themedButton {
+                            text = text(R.string.simple)
+                            bind { it.isLoading }.reverse().toViewVisibilityB(this)
+                            bind { it.testIndex }.on { it == 0 || it == -1 }
+                                    .toViewVisibilityB(this)
+                            setOnClickListener { componentHandler?.runSimpleTrial() }
+                        }
+
+                        themedButton {
                             text = text(R.string.performance)
-                            bind { it.isLoading }.reverse().toView(this) { exp, value ->
-                                if (value != null) {
-                                    exp.isEnabled = value
-                                }
-                            }
+                            bind { it.isLoading }.reverse().toViewVisibilityB(this)
                             bind { it.testIndex }.on { it == 1 || it == -1 }
                                     .toViewVisibilityB(this)
                             setOnClickListener { componentHandler?.runPerformanceTrial() }
                         }
 
-                        button {
+                        themedButton {
                             text = text(R.string.performance2)
-                            bind { it.isLoading }.reverse().toView(this) { exp, value ->
-                                if (value != null) {
-                                    exp.isEnabled = value
-                                }
-                            }
+                            bind { it.isLoading }.reverse().toViewVisibilityB(this)
                             bind { it.testIndex }.on { it == 2 || it == -1 }
                                     .toViewVisibilityB(this)
                             setOnClickListener { componentHandler?.runPerformanceTrial2() }
                         }
                     }
 
-                    textView {
+                    themedTintedTextView {
                         bind { it.resultsCount }.on { "$it trials" }.toText(this)
                     }
 
-                    textView {
+                    themedTintedTextView {
                         bindSelf { it.resultsLabel }.toText(this)
                         bind { it.resultsLabel }.onIsNotNull().toViewVisibilityB(this)
                     }
 
-                    textView {
+                    themedTintedTextView {
                         bind { it.runningDisplayText }.onSelf().toText(this)
                     }
 
-                    barChart {
+                    linearLayoutCompat {
+                        orientation = LinearLayout.VERTICAL
                         bindSelf { it.hasLoaded }.toViewVisibilityB(this)
-                        appChart()
-                        bind { it.saveData }.on { BarData(it) }.toView(this) { exp, value ->
-                            exp.data = value
+                        themedTabLayout {
+                            addTab(newTab().apply {
+                                text = "Insert"
+                            })
+                            addTab(newTab().apply {
+                                text = "Load"
+                            })
+                            bindSelf { it.chartIndex }.toTabLayout(this)
+                                    .twoWay()
+                                    .toFieldFromTabLayout()
                         }
-                    }.lparams {
-                        width = MATCH_PARENT
-                        height = dip(300)
-                    }
 
-                    barChart {
-                        bindSelf { it.hasLoaded }.toViewVisibilityB(this)
-                        appChart()
-                        bind { it.loadData }.on { BarData(it) }.toView(this) { exp, value ->
-                            exp.data = value
+                        barChart {
+                            bind { it.chartIndex }.on { it == 0 }.toViewVisibilityB(this)
+                            appChart()
+                            bind { it.saveData }.onChart(this)
+                        }.lparams {
+                            width = MATCH_PARENT
+                            height = dip(300)
                         }
-                    }.lparams {
-                        width = MATCH_PARENT
-                        height = dip(300)
+
+                        barChart {
+                            bind { it.chartIndex }.on { it == 1 }.toViewVisibilityB(this)
+                            appChart()
+                            bind { it.loadData }.onChart(this)
+                        }.lparams {
+                            width = MATCH_PARENT
+                            height = dip(300)
+                        }
+
                     }
                 }
             }
         }
     }
 
-}
-
-fun BarChart.appChart() {
-    setFitBars(true)
-    animateXY(2000, 2000)
-    xAxis.labelCount = 0
-    description = null
-
-    arrayOf(axisLeft, axisRight).forEach {
-        it.apply {
-            axisMinimum = 0.0f
-            axisMaximum = 1000.0f
-        }
-    }
 }
