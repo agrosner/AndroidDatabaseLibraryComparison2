@@ -17,10 +17,12 @@ val REQUERY_FRAMEWORK_NAME = "Requery"
 class RequeryTest(val ctx: Context) : BaseTest<PlayerEntity>(playerCreator = { PlayerEntity() },
         frameworkName = REQUERY_FRAMEWORK_NAME) {
 
-    val source = DatabaseSource(ctx, Models.DEFAULT, 1)
-    val store = EntityDataStore<PlayerEntity>(source.configuration)
+    lateinit var source: DatabaseSource
+    lateinit var store: EntityDataStore<PlayerEntity>
 
     override fun init() {
+        source = DatabaseSource(ctx, Models.DEFAULT, 1)
+        store = EntityDataStore<PlayerEntity>(source.configuration)
     }
 
     override fun insert() {
@@ -36,16 +38,22 @@ class RequeryTest(val ctx: Context) : BaseTest<PlayerEntity>(playerCreator = { P
     override fun delete() {
         store.delete().from(PlayerEntity::class.java).get().value()
     }
+
+    override fun dispose() {
+        source.close()
+    }
 }
 
-open class RequeryTestPerformance(ctx: Context) : BaseTest<Player2Entity>(
+open class RequeryTestPerformance(val ctx: Context) : BaseTest<Player2Entity>(
         playerCreator = { Player2Entity() },
         frameworkName = REQUERY_FRAMEWORK_NAME) {
 
-    val source = DatabaseSource(ctx, Models.DEFAULT, 1)
-    val store = EntityDataStore<Player2Entity>(source.configuration)
+    lateinit var source: DatabaseSource
+    lateinit var store: EntityDataStore<Player2Entity>
 
     override fun init() {
+        source = DatabaseSource(ctx, Models.DEFAULT, 1)
+        store = EntityDataStore<Player2Entity>(source.configuration)
     }
 
     override fun insert() {
@@ -60,6 +68,10 @@ open class RequeryTestPerformance(ctx: Context) : BaseTest<Player2Entity>(
 
     override fun delete() {
         store.delete().from(Player2Entity::class.java).get().value()
+    }
+
+    override fun dispose() {
+        source.close()
     }
 }
 

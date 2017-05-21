@@ -29,4 +29,8 @@ class RoomTest(val ctx: Context) : BaseTest<Player>(playerCreator = { Player() }
     override fun delete() {
         playerDao.deletePlayers(list)
     }
+
+    override fun dispose() {
+        appDatabase.close()
+    }
 }

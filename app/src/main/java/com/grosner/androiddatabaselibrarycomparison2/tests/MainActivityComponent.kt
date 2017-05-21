@@ -1,5 +1,6 @@
 package com.grosner.androiddatabaselibrarycomparison2.tests
 
+import android.arch.lifecycle.ViewModel
 import android.graphics.Color
 import android.support.design.widget.AppBarLayout
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
@@ -8,11 +9,13 @@ import android.widget.LinearLayout
 import com.andrewgrosner.kbinding.anko.BindingComponent
 import com.andrewgrosner.kbinding.bindings.*
 import com.andrewgrosner.kbinding.observable
+import com.andrewgrosner.kbinding.viewextensions.string
 import com.andrewgrosner.kbinding.viewextensions.text
 import com.github.mikephil.charting.data.BarDataSet
 import com.grosner.androiddatabaselibrarycomparison2.R
 import org.jetbrains.anko.*
 import org.jetbrains.anko.appcompat.v7.linearLayoutCompat
+import org.jetbrains.anko.appcompat.v7.themedTintedButton
 import org.jetbrains.anko.appcompat.v7.themedTintedTextView
 import org.jetbrains.anko.appcompat.v7.themedToolbar
 import org.jetbrains.anko.design.themedAppBarLayout
@@ -30,15 +33,13 @@ interface MainActivityComponentHandler {
 
 }
 
-class MainActivityViewModel {
+class MainActivityViewModel : ResultRunner.ResultHandler, ViewModel() {
 
     val isLoading = observable(false)
 
     val hasLoaded = observable(false)
 
     val runningDisplayText = observable("")
-
-    val resultsLabel = observable("")
 
     val saveData = observable<List<BarDataSet>?>(null)
     val loadData = observable<List<BarDataSet>?>(null)
@@ -49,7 +50,42 @@ class MainActivityViewModel {
 
     val chartIndex = observable(0)
 
-    val currentTest = observable("No Test")
+    val currentTest = observable("")
+
+    val runner = ResultRunner().apply {
+        resultHandler = this@MainActivityViewModel
+    }
+
+    fun bindToRunner(resultRunner: ResultRunner) {
+        runningDisplayText.value = resultRunner.resultsRaw
+        saveData.value = resultRunner.chartSaveDataSet
+        loadData.value = resultRunner.chartLoadDataSet
+        hasLoaded.value = resultRunner.hasLoaded
+    }
+
+    fun setBusyUI(enabled: Boolean, testName: String) {
+        if (enabled) {
+            runner.value?.startTrial()
+        }
+        currentTest.value = testName
+        isLoading.value = enabled
+        if (enabled) {
+            hasLoaded.value = false
+            runningDisplayText.value = "Awaiting Results"
+            resultsCount.value = 0
+        }
+    }
+
+    override fun trialCompleted(trialName: String, resultRunner: ResultRunner) {
+        bindToRunner(resultRunner)
+        setBusyUI(false, trialName)
+    }
+
+
+    override fun logTrial() {
+        resultsCount.value++
+    }
+
 }
 
 /**
@@ -77,6 +113,11 @@ class MainActivityComponent(var componentHandler: MainActivityComponentHandler?)
                         behavior = AppBarLayout.ScrollingViewBehavior())
                 verticalLayout {
 
+                    themedTintedTextView {
+                        text = text(R.string.TestHeader)
+                        textSize = 18.0f
+                    }
+
                     linearLayoutCompat {
                         themedTintedTextView {
                             bindSelf { it.isLoading }.toViewVisibilityB(this)
@@ -84,7 +125,7 @@ class MainActivityComponent(var componentHandler: MainActivityComponentHandler?)
                             textSize = 18.0f
                         }
 
-                        themedButton {
+                        themedTintedButton {
                             text = text(R.string.simple)
                             bind { it.isLoading }.reverse().toViewVisibilityB(this)
                             bind { it.testIndex }.on { it == 0 || it == -1 }
@@ -92,7 +133,7 @@ class MainActivityComponent(var componentHandler: MainActivityComponentHandler?)
                             setOnClickListener { componentHandler?.runSimpleTrial() }
                         }
 
-                        themedButton {
+                        themedTintedButton {
                             text = text(R.string.performance)
                             bind { it.isLoading }.reverse().toViewVisibilityB(this)
                             bind { it.testIndex }.on { it == 1 || it == -1 }
@@ -100,26 +141,35 @@ class MainActivityComponent(var componentHandler: MainActivityComponentHandler?)
                             setOnClickListener { componentHandler?.runPerformanceTrial() }
                         }
 
-                        themedButton {
+                        themedTintedButton {
                             text = text(R.string.performance2)
                             bind { it.isLoading }.reverse().toViewVisibilityB(this)
                             bind { it.testIndex }.on { it == 2 || it == -1 }
                                     .toViewVisibilityB(this)
                             setOnClickListener { componentHandler?.runPerformanceTrial2() }
                         }
+                    }.lparams {
+                        bottomMargin = dip(16)
                     }
 
                     themedTintedTextView {
-                        bind { it.resultsCount }.on { "$it trials" }.toText(this)
+                        textSize = 18.0f
+                        bind { it.currentTest }.on { string(R.string.results, it) }.toText(this)
+                        bind { it.currentTest }.onIsNotNullOrEmpty().toViewVisibilityB(this)
                     }
 
-                    themedTintedTextView {
-                        bindSelf { it.resultsLabel }.toText(this)
-                        bind { it.resultsLabel }.onIsNotNull().toViewVisibilityB(this)
-                    }
-
-                    themedTintedTextView {
-                        bind { it.runningDisplayText }.onSelf().toText(this)
+                    themedTintedButton {
+                        bindSelf { it.hasLoaded }.toViewVisibilityB(this)
+                        text = text(R.string.DisplayResultsText)
+                        setOnClickListener {
+                            viewModel?.let { viewModel ->
+                                alert(message = viewModel.runningDisplayText.value) {
+                                    positiveButton(android.R.string.ok) { it.dismiss() }
+                                }.build().show()
+                            }
+                        }
+                    }.lparams(width = WRAP_CONTENT) {
+                        bottomMargin = dip(16)
                     }
 
                     linearLayoutCompat {

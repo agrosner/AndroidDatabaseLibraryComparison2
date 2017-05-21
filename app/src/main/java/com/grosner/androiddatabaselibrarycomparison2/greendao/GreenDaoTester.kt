@@ -3,16 +3,24 @@ package com.grosner.androiddatabaselibrarycomparison2.greendao
 import android.content.Context
 import com.grosner.androiddatabaselibrarycomparison2.tests.BaseTest
 import com.grosner.androiddatabaselibrarycomparison2.tests.printToString
+import org.greenrobot.greendao.database.Database
 
 val GREENDAO_FRAMEWORK_NAME = "GreenDao"
 
-open class GreenDaoTest(ctx: Context) : BaseTest<Player>(playerCreator = { Player() },
+open class GreenDaoTest(val ctx: Context) : BaseTest<Player>(playerCreator = { Player() },
         frameworkName = GREENDAO_FRAMEWORK_NAME) {
 
-    val helper = DaoMaster.DevOpenHelper(ctx, "greendao-db")
-    val db = helper.writableDb!!
-    val daoSession = DaoMaster(db).newSession()!!
-    val playerDao = daoSession.playerDao!!
+    lateinit var helper: DaoMaster.DevOpenHelper
+    lateinit var db: Database
+    lateinit var daoSession: DaoSession
+    lateinit var playerDao: PlayerDao
+
+    override fun init() {
+        helper = DaoMaster.DevOpenHelper(ctx, "greendao-db")
+        db = helper.writableDb!!
+        daoSession = DaoMaster(db).newSession()
+        playerDao = daoSession.playerDao!!
+    }
 
     override fun insert() {
         playerDao.insertInTx(list)
@@ -24,6 +32,10 @@ open class GreenDaoTest(ctx: Context) : BaseTest<Player>(playerCreator = { Playe
 
     override fun delete() {
         playerDao.deleteAll()
+    }
+
+    override fun dispose() {
+        db.close()
     }
 }
 

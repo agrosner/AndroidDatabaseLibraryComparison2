@@ -31,8 +31,8 @@ abstract class BaseTest<P : IPlayer>(val playerCreator: () -> P,
         loadTime = currentTime - loadTime
 
         delete()
+        dispose()
         return Result(frameworkName, insertTime, loadTime)
-
     }
 
     open fun init() = Unit
@@ -42,4 +42,6 @@ abstract class BaseTest<P : IPlayer>(val playerCreator: () -> P,
     abstract fun load()
 
     abstract fun delete()
+
+    abstract fun dispose()
 }

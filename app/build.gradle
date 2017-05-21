@@ -46,6 +46,10 @@ dependencies {
     compile "org.jetbrains.anko:anko-support-v4:$anko_version"
     compile "org.jetbrains.anko:anko-appcompat-v7:$anko_version"
 
+    compile "android.arch.lifecycle:runtime:1.0.0-alpha1"
+    compile "android.arch.lifecycle:extensions:1.0.0-alpha1"
+    kapt "android.arch.lifecycle:compiler:1.0.0-alpha1"
+
     compile project(':kbinding')
     compile project(':kbinding-anko')
 }

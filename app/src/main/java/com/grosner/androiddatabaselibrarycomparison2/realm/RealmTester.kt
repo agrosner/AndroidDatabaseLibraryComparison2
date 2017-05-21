@@ -30,6 +30,10 @@ open class RealmDefault : BaseTest<Player>(playerCreator = { Player() },
             realm.where(Player::class.java).findAll().deleteAllFromRealm()
         }
     }
+
+    override fun dispose() {
+        realm.close()
+    }
 }
 
 class RealmPerformance : RealmDefault() {

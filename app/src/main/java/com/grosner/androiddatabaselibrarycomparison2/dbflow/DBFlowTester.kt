@@ -1,6 +1,7 @@
 package com.grosner.androiddatabaselibrarycomparison2.dbflow
 
 import com.grosner.androiddatabaselibrarycomparison2.tests.*
+import com.raizlabs.android.dbflow.config.FlowManager
 import com.raizlabs.android.dbflow.kotlinextensions.*
 import com.raizlabs.android.dbflow.sql.language.Delete
 
@@ -23,6 +24,10 @@ open class DBFlowTest : BaseTest<Player>(playerCreator = { Player() },
 
     override fun delete() {
         delete<Player>().execute()
+    }
+
+    override fun dispose() {
+        database<DBFlowDatabase>().destroy(FlowManager.getContext())
     }
 }
 
@@ -49,6 +54,10 @@ open class DBFlowTestPerformance : BaseTest<Player2>(playerCreator = { Player2()
 
     override fun delete() {
         delete<Player2>().execute()
+    }
+
+    override fun dispose() {
+        database<DBFlowDatabase>().destroy(FlowManager.getContext())
     }
 }
 

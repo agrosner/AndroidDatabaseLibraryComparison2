@@ -1,16 +1,22 @@
 package com.grosner.androiddatabaselibrarycomparison2.raw
 
 import android.content.Context
+import android.database.sqlite.SQLiteDatabase
 import com.grosner.androiddatabaselibrarycomparison2.raw.PlayerContract.PlayerEntry.TABLE_NAME
 import com.grosner.androiddatabaselibrarycomparison2.tests.BaseTest
 
 val RAW_FRAMEWORK_NAME = "Raw SQLite"
 
-open class RawTest(ctx: Context) : BaseTest<Player>(playerCreator = { Player() },
+open class RawTest(val ctx: Context) : BaseTest<Player>(playerCreator = { Player() },
         frameworkName = RAW_FRAMEWORK_NAME) {
 
-    val helper = PlayerDBHelper(ctx)
-    val db = helper.writableDatabase
+    lateinit var helper: PlayerDBHelper
+    lateinit var db: SQLiteDatabase
+
+    override fun init() {
+        helper = PlayerDBHelper(ctx)
+        db = helper.writableDatabase
+    }
 
     override fun insert() {
         db.beginTransaction()
@@ -35,6 +41,10 @@ open class RawTest(ctx: Context) : BaseTest<Player>(playerCreator = { Player() }
 
     override fun delete() {
         db.execSQL("DELETE FROM $TABLE_NAME")
+    }
+
+    override fun dispose() {
+        db.close()
     }
 }
 

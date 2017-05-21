@@ -5,4 +5,6 @@
     <string name="simple">Defaults</string>
     <string name="performance">Performance</string>
     <string name="performance2">Performance2</string>
+    <string name="DisplayResultsText">Display Raw Results</string>
+    <string name="TestHeader">Select A Test</string>
 </resources>
