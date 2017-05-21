@@ -1,1 +1,7 @@
 include ':app'
+
+include ':kbinding'
+project(':kbinding').projectDir = new File('Libraries/KBinding/kbinding')
+
+include ':kbinding-anko'
+project(':kbinding-anko').projectDir = new File('Libraries/KBinding/kbinding-anko')

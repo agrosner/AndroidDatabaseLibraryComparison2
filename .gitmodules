@@ -1,0 +1,3 @@
+[submodule "Libraries/KBinding"]
+	path = Libraries/KBinding
+	url = https://github.com/agrosner/KBinding

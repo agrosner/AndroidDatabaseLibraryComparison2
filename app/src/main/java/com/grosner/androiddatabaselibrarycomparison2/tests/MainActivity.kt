@@ -88,17 +88,14 @@ class MainActivity : MainActivityComponentHandler, Activity() {
 
             val (_, insertTime, loadTime) = calculateAverage(name)
 
-            resultsStringBuilder.append("$name insert AVG: $insertTime msec\n")
-            resultsStringBuilder.append("$name load AVG: $loadTime msec\n")
+            resultsStringBuilder.append("$name AVG: $insertTime / $loadTime msec\n")
 
             chartSave.add(BarEntry(position.toFloat(), insertTime.toFloat()).apply { data = name })
             chartLoad.add(BarEntry(position.toFloat(), loadTime.toFloat()).apply { data = name })
         }
 
-        runOnUiThread {
-            viewModel.runningDisplayText.value = resultsStringBuilder.toString()
-            viewModel.resultsCount.value = viewModel.resultsCount.value + 1
-        }
+        viewModel.runningDisplayText.value = resultsStringBuilder.toString()
+        viewModel.hasLoaded.value = true
         initChart()
         runningTests = false
         setBusyUI(false, trialName)
@@ -144,26 +141,32 @@ class MainActivity : MainActivityComponentHandler, Activity() {
     private fun setBusyUI(enabled: Boolean, testName: String) {
         runningTestName = testName
         runningTests = enabled
-        runOnUiThread {
-            viewModel.isLoading.value = enabled
-            if (enabled) {
-                resultsStringBuilder.setLength(0)
-            }
-            if (runningTestName != null) {
-                viewModel.resultsLabel.value = resources.getString(R.string.results, testName)
-            }
+        viewModel.isLoading.value = enabled
+        if (enabled) {
+            viewModel.hasLoaded.value = false
+            resultsStringBuilder.setLength(0)
+        }
+        if (runningTestName != null) {
+            viewModel.resultsLabel.value = resources.getString(R.string.results, testName)
         }
     }
 
     private fun initChart() {
-        viewModel.saveData.value = chartSave.map { BarDataSet(listOf(it), it.data.toString()).apply { color = getFrameworkColor(it.data.toString()) } }
-        viewModel.loadData.value = chartLoad.map { BarDataSet(listOf(it), it.data.toString()).apply { color = getFrameworkColor(it.data.toString()) } }
+        viewModel.saveData.value = chartSave.map {
+            BarDataSet(listOf(it), it.data.toString())
+                    .apply { color = getFrameworkColor(it.data.toString()) }
+        }
+        viewModel.loadData.value = chartLoad.map {
+            BarDataSet(listOf(it), it.data.toString())
+                    .apply { color = getFrameworkColor(it.data.toString()) }
+        }
     }
 
     private fun resetChart() {
         chartSave.clear()
         chartLoad.clear()
         resultMap.clear()
+        viewModel.resultsCount.value = 0
     }
 
     private fun getFrameworkColor(framework: String): Int {
@@ -177,6 +180,10 @@ class MainActivity : MainActivityComponentHandler, Activity() {
             ROOM_FRAMEWORK_NAME -> return Color.GRAY
             else -> return WHITE
         }
+    }
+
+    fun logTrial() {
+        viewModel.resultsCount.value = viewModel.resultsCount.value + 1
     }
 
     /**
@@ -197,6 +204,7 @@ class MainActivity : MainActivityComponentHandler, Activity() {
                 logTime(RequeryTest(applicationContext).test())
                 logTime(GreenDaoTest(applicationContext).test())
                 logTime(RawTest(applicationContext).test())
+                logTrial()
             }
             trialCompleted(resources.getString(R.string.simple))
         }).apply { start() }
@@ -239,10 +247,8 @@ class MainActivity : MainActivityComponentHandler, Activity() {
     }
 
     companion object {
-        val LOAD_TIME = "Load"
-        val SAVE_TIME = "Save"
-
         const val LOOP_COUNT = 5000
+        const val TEST_COUNT = 15
 
         private val STATE_LOAD_DATA = "loadData"
         private val STATE_SAVE_DATA = "saveData"

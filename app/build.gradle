@@ -17,9 +17,12 @@ android {
 }
 
 def dbflow_version = "4.0.2"
+def anko_version = "0.10.0"
+def kbinding_version = "1.0.0-beta3"
 
 dependencies {
     compile 'com.android.support:appcompat-v7:25.3.1'
+    compile 'com.android.support:design:25.3.1'
 
     kapt "com.github.Raizlabs.DBFlow:dbflow-processor:${dbflow_version}"
     compile "com.github.Raizlabs.DBFlow:dbflow-core:${dbflow_version}"
@@ -38,9 +41,13 @@ dependencies {
 
     compile 'org.greenrobot:greendao:3.2.2'
 
-    compile 'org.jetbrains.anko:anko-sdk15:0.9.1' // current version of anko used
-    compile 'com.github.agrosner.KBinding:kbinding:ecd636fa68' // version of KBinding
-    compile 'com.github.agrosner.KBinding:kbinding-anko:ecd636fa68' // version of KBinding
+    compile "org.jetbrains.anko:anko-sdk15:$anko_version"
+    compile "org.jetbrains.anko:anko-design:$anko_version"
+    compile "org.jetbrains.anko:anko-support-v4:$anko_version"
+    compile "org.jetbrains.anko:anko-appcompat-v7:$anko_version"
+
+    compile project(':kbinding')
+    compile project(':kbinding-anko')
 }
 
 kapt {

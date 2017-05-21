@@ -1,7 +1,9 @@
 package com.grosner.androiddatabaselibrarycomparison2.tests
 
-import android.view.ViewGroup
-import android.view.ViewManager
+import android.graphics.Color
+import android.support.design.widget.AppBarLayout
+import android.view.ViewGroup.LayoutParams.MATCH_PARENT
+import android.view.ViewGroup.LayoutParams.WRAP_CONTENT
 import com.andrewgrosner.kbinding.BaseObservable
 import com.andrewgrosner.kbinding.anko.BindingComponent
 import com.andrewgrosner.kbinding.bindings.*
@@ -12,7 +14,11 @@ import com.github.mikephil.charting.data.BarData
 import com.github.mikephil.charting.data.BarDataSet
 import com.grosner.androiddatabaselibrarycomparison2.R
 import org.jetbrains.anko.*
-import org.jetbrains.anko.custom.ankoView
+import org.jetbrains.anko.appcompat.v7.linearLayoutCompat
+import org.jetbrains.anko.appcompat.v7.toolbar
+import org.jetbrains.anko.design.appBarLayout
+import org.jetbrains.anko.design.coordinatorLayout
+import org.jetbrains.anko.support.v4.nestedScrollView
 
 interface MainActivityComponentHandler {
 
@@ -20,12 +26,14 @@ interface MainActivityComponentHandler {
 
     fun runPerformanceTrial()
 
-    fun runPerformanceTrial2();
+    fun runPerformanceTrial2()
 }
 
 class MainActivityViewModel : BaseObservable() {
 
     val isLoading = observable(false)
+
+    val hasLoaded = observable(false)
 
     val runningDisplayText = observable("")
 
@@ -36,6 +44,8 @@ class MainActivityViewModel : BaseObservable() {
     val loadData = observable<List<BarDataSet>?>(null)
 
     val resultsCount = observable(0)
+
+    val testIndex = observable(-1)
 }
 
 /**
@@ -44,84 +54,97 @@ class MainActivityViewModel : BaseObservable() {
 class MainActivityComponent(var componentHandler: MainActivityComponentHandler?)
     : BindingComponent<MainActivity, MainActivityViewModel>() {
     override fun createViewWithBindings(ui: AnkoContext<MainActivity>) = with(ui) {
-        scrollView {
-            verticalLayout {
+        coordinatorLayout {
+            appBarLayout {
+                toolbar {
+                    title = "Database Comparisons"
+                    setTitleTextColor(Color.WHITE)
+                }
 
-                linearLayout {
-                    button {
-                        text = text(R.string.simple)
-                        bind { it.isLoading }.reverse().toView(this) { exp, value ->
-                            if (value != null) {
-                                exp.enabled = value
+                horizontalProgressBar {
+                    bind { it.resultsCount }.on { ((it.toDouble() / MainActivity.TEST_COUNT.toDouble()) * 100).toInt() }
+                            .toProgressBar(this)
+                    bindSelf { it.isLoading }.toViewVisibilityB(this)
+                }
+
+            }.lparams(width = MATCH_PARENT, height = WRAP_CONTENT)
+            nestedScrollView {
+                coordinatorLParams(width = MATCH_PARENT, height = MATCH_PARENT,
+                        behavior = AppBarLayout.ScrollingViewBehavior())
+                verticalLayout {
+
+                    linearLayoutCompat {
+                        button {
+                            text = text(R.string.simple)
+                            bind { it.isLoading }.reverse().toView(this) { exp, value ->
+                                value?.let { exp.isEnabled = value }
+                            }
+                            bind { it.testIndex }.on { it == 0 || it == -1 }
+                                    .toViewVisibilityB(this)
+                            setOnClickListener {
+                                componentHandler?.runSimpleTrial()
                             }
                         }
-                        onClick { componentHandler?.runSimpleTrial() }
-                    }
 
-                    button {
-                        text = text(R.string.performance)
-                        bind { it.isLoading }.reverse().toView(this) { exp, value ->
-                            if (value != null) {
-                                exp.enabled = value
+                        button {
+                            text = text(R.string.performance)
+                            bind { it.isLoading }.reverse().toView(this) { exp, value ->
+                                if (value != null) {
+                                    exp.isEnabled = value
+                                }
                             }
+                            bind { it.testIndex }.on { it == 1 || it == -1 }
+                                    .toViewVisibilityB(this)
+                            setOnClickListener { componentHandler?.runPerformanceTrial() }
                         }
-                        onClick { componentHandler?.runPerformanceTrial() }
-                    }
 
-                    button {
-                        text = text(R.string.performance2)
-                        bind { it.isLoading }.reverse().toView(this) { exp, value ->
-                            if (value != null) {
-                                exp.enabled = value
+                        button {
+                            text = text(R.string.performance2)
+                            bind { it.isLoading }.reverse().toView(this) { exp, value ->
+                                if (value != null) {
+                                    exp.isEnabled = value
+                                }
                             }
+                            bind { it.testIndex }.on { it == 2 || it == -1 }
+                                    .toViewVisibilityB(this)
+                            setOnClickListener { componentHandler?.runPerformanceTrial2() }
                         }
-                        onClick { componentHandler?.runPerformanceTrial2() }
                     }
 
-                    progressBar {
-                        bind { it.isLoading }.onSelf().toViewVisibilityB(this)
+                    textView {
+                        bind { it.resultsCount }.on { "$it trials" }.toText(this)
                     }
-                }
 
-                textView {
-                    bind { it.resultsCount }.on { "$it trials" }.toText(this)
-                }
-
-                textView {
-                    bind { it.resultsLabel }.onSelf().toText(this)
-                    bind { it.resultsLabel }.onIsNotNull().toViewVisibilityB(this)
-                }
-
-                textView {
-                    bind { it.runningDisplayText }.onSelf().toText(this)
-                }
-
-                barChart {
-                    bind { it.isLoading }.reverse().toViewVisibilityB(this)
-                    setFitBars(true)
-                    animateXY(2000, 2000)
-                    description = null
-                    xAxis.labelCount = 0
-                    bind { it.saveData }.on { it?.let { BarData(it) } }.toView(this) { exp, value ->
-                        exp.data = value
+                    textView {
+                        bindSelf { it.resultsLabel }.toText(this)
+                        bind { it.resultsLabel }.onIsNotNull().toViewVisibilityB(this)
                     }
-                }.lparams{
-                    width = ViewGroup.LayoutParams.MATCH_PARENT
-                    height = dip(300)
-                }
 
-                barChart {
-                    bind { it.isLoading }.reverse().toViewVisibilityB(this)
-                    setFitBars(true)
-                    animateXY(2000, 2000)
-                    xAxis.labelCount = 0
-                    description = null
-                    bind { it.loadData }.on { it?.let { BarData(it) } }.toView(this) { exp, value ->
-                        exp.data = value
+                    textView {
+                        bind { it.runningDisplayText }.onSelf().toText(this)
                     }
-                }.lparams {
-                    width = ViewGroup.LayoutParams.MATCH_PARENT
-                    height = dip(300)
+
+                    barChart {
+                        bindSelf { it.hasLoaded }.toViewVisibilityB(this)
+                        appChart()
+                        bind { it.saveData }.on { BarData(it) }.toView(this) { exp, value ->
+                            exp.data = value
+                        }
+                    }.lparams {
+                        width = MATCH_PARENT
+                        height = dip(300)
+                    }
+
+                    barChart {
+                        bindSelf { it.hasLoaded }.toViewVisibilityB(this)
+                        appChart()
+                        bind { it.loadData }.on { BarData(it) }.toView(this) { exp, value ->
+                            exp.data = value
+                        }
+                    }.lparams {
+                        width = MATCH_PARENT
+                        height = dip(300)
+                    }
                 }
             }
         }
@@ -129,6 +152,16 @@ class MainActivityComponent(var componentHandler: MainActivityComponentHandler?)
 
 }
 
-inline fun ViewManager.barChart(init: BarChart.() -> Unit): BarChart {
-    return ankoView({ BarChart(it) }, theme = 0, init = init)
+fun BarChart.appChart() {
+    setFitBars(true)
+    animateXY(2000, 2000)
+    xAxis.labelCount = 0
+    description = null
+
+    arrayOf(axisLeft, axisRight).forEach {
+        it.apply {
+            axisMinimum = 0.0f
+            axisMaximum = 1000.0f
+        }
+    }
 }
