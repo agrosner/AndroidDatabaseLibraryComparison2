@@ -1,6 +1,13 @@
 package com.grosner.androiddatabaselibrarycomparison2.room
 
-import android.arch.persistence.room.*
+import android.arch.persistence.room.Dao
+import android.arch.persistence.room.Database
+import android.arch.persistence.room.Delete
+import android.arch.persistence.room.Entity
+import android.arch.persistence.room.Insert
+import android.arch.persistence.room.PrimaryKey
+import android.arch.persistence.room.Query
+import android.arch.persistence.room.RoomDatabase
 import com.grosner.androiddatabaselibrarycomparison2.tests.IPlayer
 
 
@@ -35,5 +42,7 @@ interface PlayerDao {
 @Database(entities = arrayOf(Player::class), version = 1)
 abstract class AppDatabase : RoomDatabase() {
 
-    abstract fun playerDao(): PlayerDao
+    abstract val playerDao: PlayerDao
+
 }
+

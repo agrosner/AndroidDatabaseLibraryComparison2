@@ -15,7 +15,7 @@ class RoomTest(val ctx: Context) : BaseTest<Player>(playerCreator = { Player() }
     override fun init() {
         appDatabase = Room.databaseBuilder(ctx,
                 AppDatabase::class.java, "room-db").build()
-        playerDao = appDatabase.playerDao();
+        playerDao = appDatabase.playerDao
     }
 
     override fun insert() {
